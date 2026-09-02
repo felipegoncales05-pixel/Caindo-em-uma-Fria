@@ -1,5 +1,5 @@
 window.OPH = window.OPH || {};
-console.info("[OPH] YUMIYA REMOTE FINAL-09 // PLAYER");
+console.info("[OPH] YUMIYA REMOTE FINAL-10 // PLAYER");
 (() => {
   let state = OPH.cloneDefault();
   let room = new URLSearchParams(location.search).get("room") || localStorage.getItem("oph-room") || window.OPH_CONFIG.defaultRoom || "FRIA-01";
@@ -173,7 +173,7 @@ console.info("[OPH] YUMIYA REMOTE FINAL-09 // PLAYER");
     backdrop?.classList.toggle("hidden",!focusMode || !chatOpen);
     document.body.classList.toggle("yumiyaFocusActive",focusMode && chatOpen);
     if(btn){btn.classList.toggle("active",focusMode);btn.querySelector("b").textContent=focusMode?"VOLTAR AO COMPACTO":"ABRIR FOCUS"}
-    if(mode)mode.textContent=focusMode?"MODO: FOCUS // FINAL-09":"MODO: COMPACTO // FINAL-09";
+    if(mode)mode.textContent=focusMode?"MODO: FOCUS // FINAL-10":"MODO: COMPACTO // FINAL-10";
   }
   function toggleYumiyaFocus(force){
     focusMode=typeof force==="boolean"?force:!focusMode;
@@ -258,15 +258,70 @@ console.info("[OPH] YUMIYA REMOTE FINAL-09 // PLAYER");
     setTimeout(()=>$("eventOverlay").classList.remove("show"),ev.duration||5000);
   }
 
-  function localChatKey(){return "oph-yumiya-out-"+room}
-  function getLocalOutgoing(){
-    try{return JSON.parse(localStorage.getItem(localChatKey())||"[]").filter(x=>x&&x.text)}catch(e){return[]}
+  function localChatKey(){
+    const pid=getYumiyaIdentity()?.playerId||"UNIDENTIFIED";
+    return `oph-yumiya-thread-${room}-${pid}`;
   }
-  function saveLocalOutgoing(arr){localStorage.setItem(localChatKey(),JSON.stringify(arr.slice(-30)))}
+  function legacyLocalChatKey(){return "oph-yumiya-out-"+room}
+  function clearMarkerKey(){
+    const pid=getYumiyaIdentity()?.playerId||"UNIDENTIFIED";
+    return `oph-yumiya-clear-seen-${room}-${pid}`;
+  }
+  function getLocalOutgoing(){
+    try{
+      let current=JSON.parse(localStorage.getItem(localChatKey())||"[]");
+      if(!Array.isArray(current))current=[];
+      if(!current.length){
+        const legacy=JSON.parse(localStorage.getItem(legacyLocalChatKey())||"[]");
+        if(Array.isArray(legacy)&&legacy.length){
+          current=legacy.filter(x=>x&&x.text).map(x=>Object.assign({clientMessageId:x.clientMessageId||x.id||("legacy-"+(x.ts||Date.now())),clientTs:Number(x.clientTs||x.ts)||Date.now(),status:x.status||"sent"},x));
+          saveLocalOutgoing(current);
+          localStorage.removeItem(legacyLocalChatKey());
+        }
+      }
+      return current.filter(x=>x&&x.text);
+    }catch(e){return[]}
+  }
+  function saveLocalOutgoing(arr){localStorage.setItem(localChatKey(),JSON.stringify((arr||[]).slice(-80)))}
+  function updateLocalOutgoing(clientMessageId,patch){
+    const arr=getLocalOutgoing(),i=arr.findIndex(x=>(x.clientMessageId||x.id)===clientMessageId);
+    if(i<0)return;
+    arr[i]=Object.assign({},arr[i],patch||{});saveLocalOutgoing(arr);
+  }
+  function applyRemoteClearMarker(){
+    const marker=Number(state.comms?.clearedAt)||0;
+    if(!marker)return;
+    const key=clearMarkerKey(),seen=Number(localStorage.getItem(key)||0);
+    if(marker>seen){
+      saveLocalOutgoing([]);
+      localStorage.removeItem(legacyLocalChatKey());
+      localStorage.setItem(key,String(marker));
+    }
+  }
   function isForMe(m){
     if(!m.targetUid || m.targetUid==="all")return true;
     const identity=getYumiyaIdentity();
     return !!((playerUid && m.targetUid===playerUid) || (identity?.playerId && m.targetPlayerId===identity.playerId));
+  }
+  function timelineOrderValue(m){return Number(m.clientTs||m.ts)||0}
+  function buildYumiyaTimeline(local,remote){
+    const all=[
+      ...local.map(m=>Object.assign({source:"player"},m,{clientMessageId:m.clientMessageId||m.id})),
+      ...remote.map(m=>Object.assign({source:"yumiya"},m))
+    ].sort((a,b)=>timelineOrderValue(a)-timelineOrderValue(b));
+    const replies=all.filter(m=>m.source==="yumiya"&&m.replyToClientMessageId);
+    replies.forEach(reply=>{
+      let ri=all.indexOf(reply);
+      const li=all.findIndex(m=>m.source==="player"&&(m.clientMessageId||m.id)===reply.replyToClientMessageId);
+      if(li<0||ri<0)return;
+      all.splice(ri,1);
+      let anchor=all.findIndex(m=>m.source==="player"&&(m.clientMessageId||m.id)===reply.replyToClientMessageId);
+      if(anchor<0){all.push(reply);return}
+      let insert=anchor+1;
+      while(insert<all.length&&all[insert].source==="yumiya"&&all[insert].replyToClientMessageId===reply.replyToClientMessageId)insert++;
+      all.splice(insert,0,reply);
+    });
+    return all;
   }
   function renderYumiya(){
     const enabled=!!state.visible.comms;
@@ -281,21 +336,23 @@ console.info("[OPH] YUMIYA REMOTE FINAL-09 // PLAYER");
       return;
     }
 
+    applyRemoteClearMarker();
     const clearedAt=Number(state.comms.clearedAt)||0;
     const remote=(state.comms.messages||[]).filter(m=>(Number(m.ts)||0)>clearedAt).filter(isForMe);
-    const localRaw=getLocalOutgoing();
-    const localKept=localRaw.filter(m=>(Number(m.ts)||0)>clearedAt);
-    if(localKept.length!==localRaw.length)saveLocalOutgoing(localKept);
-    const local=localKept.map(m=>Object.assign({source:"player"},m));
+    const local=getLocalOutgoing();
+    const conversation=buildYumiyaTimeline(local,remote);
     const merged=[
-      {id:"system-welcome",source:"system",ts:0,text:"Canal remoto inicializado. Você pode enviar uma solicitação operacional para a Yumiya quando necessário."},
-      ...local,
-      ...remote.map(m=>Object.assign({source:"yumiya"},m))
-    ].sort((a,b)=>(a.ts||0)-(b.ts||0));
+      {id:"system-welcome",source:"system",text:"Canal remoto inicializado. Você pode enviar uma solicitação operacional para a Yumiya quando necessário."},
+      ...conversation
+    ];
 
     $("yumiyaMessages").innerHTML=merged.map(m=>{
       if(m.source==="system") return `<div class="chatSystemMsg">${esc(m.text)}</div>`;
-      if(m.source==="player") return `<div class="chatMsg player"><div class="chatMeta">VOCÊ // ${new Date(m.ts).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</div><div class="chatBubble">${esc(m.text)}</div></div>`;
+      if(m.source==="player"){
+        const status=m.status==="failed"?"FALHA NO ENVIO":m.status==="sending"?"ENVIANDO...":"ENVIADA";
+        const statusClass=m.status==="failed"?" failed":m.status==="sending"?" sending":"";
+        return `<div class="chatMsg player${statusClass}"><div class="chatMeta">VOCÊ // ${new Date(m.clientTs||m.ts||Date.now()).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})} // ${status}</div><div class="chatBubble">${esc(m.text)}</div></div>`;
+      }
       const style=["normal","urgent","glitch"].includes(m.style)?m.style:"normal";
       return `<div class="chatMsg yumiya ${style}"><div class="chatMeta">YUMIYA // ${new Date(m.ts).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</div><div class="chatBubble">${esc(m.text)}</div></div>`;
     }).join("");
@@ -315,10 +372,9 @@ console.info("[OPH] YUMIYA REMOTE FINAL-09 // PLAYER");
     }
     lastSeenCommsTs=Math.max(lastSeenCommsTs,newest);
 
-    if(chatOpen){
-      requestAnimationFrame(()=>{$("yumiyaMessages").scrollTop=$("yumiyaMessages").scrollHeight});
-    }
+    if(chatOpen){requestAnimationFrame(()=>{$("yumiyaMessages").scrollTop=$("yumiyaMessages").scrollHeight});}
   }
+
   function toggleYumiyaChat(force){
     chatOpen=typeof force==="boolean"?force:!chatOpen;
     $("yumiyaChat").classList.toggle("hidden",!chatOpen);
@@ -339,23 +395,25 @@ console.info("[OPH] YUMIYA REMOTE FINAL-09 // PLAYER");
     if(!connected){toast("CONECTE-SE À SALA PRIMEIRO");return}
     const identity=getYumiyaIdentity()||ensureYumiyaIdentityFromMainName();
     if(!identity){
-      renderIdentityGate();
-      toast("IDENTIFIQUE O OPERADOR PRIMEIRO");
-      $("yumiyaIdentityInput")?.focus();
-      return;
+      renderIdentityGate();toast("IDENTIFIQUE O OPERADOR PRIMEIRO");$("yumiyaIdentityInput")?.focus();return;
     }
     const box=$("yumiyaInput"), text=box.value.trim(); if(!text)return;
     const nickname=identity.name, playerId=identity.playerId;
-    const item={id:"out-"+Date.now()+"-"+Math.random().toString(36).slice(2,6),text,ts:Date.now(),nickname,playerId};
+    const clientMessageId="player-"+(crypto.randomUUID?.()||Date.now()+"-"+Math.random().toString(36).slice(2));
+    const clientTs=Date.now();
+    const item={id:clientMessageId,clientMessageId,text,clientTs,ts:clientTs,nickname,playerId,status:"sending"};
     const local=getLocalOutgoing();local.push(item);saveLocalOutgoing(local);
     box.value="";renderYumiya();
     try{
-      await OPH.Realtime.sendChat({text,nickname,playerId});
-      toast("SOLICITAÇÃO ENVIADA");
+      const requestId=await OPH.Realtime.sendChat({text,nickname,playerId,clientMessageId,clientTs});
+      updateLocalOutgoing(clientMessageId,{status:"sent",requestId:requestId||""});
+      renderYumiya();toast("SOLICITAÇÃO ENVIADA");
     }catch(e){
-      toast("FALHA AO ENVIAR");console.error(e)
+      updateLocalOutgoing(clientMessageId,{status:"failed"});
+      renderYumiya();toast("FALHA AO ENVIAR");console.error(e)
     }
   }
+
 
   function render(){
     renderNav();renderApproaches();renderPreps();renderN02();renderEmergency();renderEvent();renderYumiya();

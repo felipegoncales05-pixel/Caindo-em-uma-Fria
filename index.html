@@ -1,5 +1,5 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cair em uma Fria — Jogadores</title><link rel="stylesheet" href="shared.css?v=FINAL09">
-<script src="config.js?v=FINAL09"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script><script src="state.js?v=FINAL09"></script><script src="player-data.js?v=FINAL09"></script><script src="realtime.js?v=FINAL09"></script></head>
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cair em uma Fria — Jogadores</title><link rel="stylesheet" href="shared.css?v=FINAL10">
+<script src="config.js?v=FINAL10"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script><script src="state.js?v=FINAL10"></script><script src="player-data.js?v=FINAL10"></script><script src="realtime.js?v=FINAL10"></script></head>
 <body><div class="app">
 <header class="top"><div class="brand"><small>DCX // CONSOLE TÁTICO // REALTIME</small><b>CAIR EM UMA FRIA — OPERAÇÃO H</b></div><div class="actions"><label class="follow"><input id="followHost" type="checkbox" checked> seguir narrador</label><span class="statusDot" id="conn"></span><span class="btn" id="mode">OFFLINE</span></div></header>
 <div class="roomBar"><b>SALA</b><input id="room"><b>NOME</b><input id="name" placeholder="Jogador"><button class="btn" onclick="OPHPlayer.connect()">CONECTAR</button></div>
@@ -43,14 +43,14 @@
   <header class="yumiyaChatHead">
     <div class="yumiyaAvatar"><span>YK</span></div>
     <div class="yumiyaIdentity">
-      <small>DCX // ASSISTÊNCIA REMOTA // FINAL-09</small>
+      <small>DCX // ASSISTÊNCIA REMOTA // FINAL-10</small>
       <b>YUMIYA KIRYUIN</b>
       <em><span class="miniDot"></span><span id="yumiyaStatus">CANAL SEGURO</span></em>
     </div>
     <button class="chatFocusBtn" id="yumiyaFocusBtn" onclick="OPHPlayer.toggleYumiyaFocus()" title="Abrir modo Focus"><span>⌗</span><b>ABRIR FOCUS</b></button>
     <button class="chatIconBtn" onclick="OPHPlayer.toggleYumiyaChat(false)" title="Fechar">×</button>
   </header>
-  <div class="yumiyaSystemLine"><span id="yumiyaChannelLabel">KIRYUIN RESPONSE INTERFACE // CONSULTAS OPERACIONAIS</span><b id="yumiyaViewMode">MODO: COMPACTO // FINAL-09</b></div>
+  <div class="yumiyaSystemLine"><span id="yumiyaChannelLabel">KIRYUIN RESPONSE INTERFACE // CONSULTAS OPERACIONAIS</span><b id="yumiyaViewMode">MODO: COMPACTO // FINAL-10</b></div>
   <div class="yumiyaIdentityGate hidden" id="yumiyaIdentityGate">
     <div class="tag">DCX // IDENTIFICAÇÃO DE OPERADOR</div>
     <h3>IDENTIFIQUE-SE PARA ACESSAR O CANAL</h3>
@@ -76,4 +76,4 @@
   <div class="yumiyaFoot" id="yumiyaFoot"><span id="yumiyaOperator">OPERADOR ATIVO // NÃO IDENTIFICADO</span><button class="yumiyaReidentify" onclick="OPHPlayer.openYumiyaRename()"><span>✎</span> RENOMEAR OPERADOR</button></div>
 </section>
 
-<div class="eventOverlay" id="eventOverlay"><div class="eventCard"><div class="tag">BROADCAST DO KEYMASTER</div><h2 id="eventTitle"></h2><p id="eventBody"></p><button class="btn" onclick="document.getElementById('eventOverlay').classList.remove('show')">FECHAR</button></div></div><div class="toast" id="toast"></div><script src="player.js?v=FINAL09"></script></body></html>
+<div class="eventOverlay" id="eventOverlay"><div class="eventCard"><div class="tag">BROADCAST DO KEYMASTER</div><h2 id="eventTitle"></h2><p id="eventBody"></p><button class="btn" onclick="document.getElementById('eventOverlay').classList.remove('show')">FECHAR</button></div></div><div class="toast" id="toast"></div><script src="player.js?v=FINAL10"></script></body></html>

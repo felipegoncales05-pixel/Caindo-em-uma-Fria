@@ -151,7 +151,9 @@ OPH.Realtime = (() => {
   }
 
   async function sendChat(req){
-    req=Object.assign({},req,{type:"chat",ts:Date.now()});
+    const clientTs=Number(req?.clientTs)||Date.now();
+    const clientMessageId=String(req?.clientMessageId||"").slice(0,96);
+    req=Object.assign({},req,{type:"chat",clientTs,clientMessageId,ts:Date.now()});
     if(mode==="firebase"){
       const ref=db.ref(`rooms/${room}/requests/${uid}/chat`).push(); req.id=ref.key; await ref.set(req); return req.id;
     }
@@ -176,6 +178,14 @@ OPH.Realtime = (() => {
     const all=readLocal(reqStoreKey(),{}); const node=all[ownerUid]; if(node?.chat){ delete node.chat[messageId]; if(!Object.keys(node.chat).length) delete node.chat; if(!Object.keys(node).length) delete all[ownerUid]; } postRequests(all);
   }
 
+  async function removeOperator(ownerUid){
+    ownerUid=String(ownerUid||"").trim();
+    if(!ownerUid)return;
+    if(mode==="firebase") return db.ref(`rooms/${room}/requests/${ownerUid}`).remove();
+    if(mode==="ws"){ ws.send(JSON.stringify({type:"remove_operator",ownerUid})); return; }
+    const all=readLocal(reqStoreKey(),{}); delete all[ownerUid]; postRequests(all);
+  }
+
   async function clearAllChats(){
     if(mode==="firebase"){
       const base=db.ref(`rooms/${room}/requests`),snap=await base.once("value"),val=snap.val()||{},updates={};
@@ -186,5 +196,5 @@ OPH.Realtime = (() => {
     const all=readLocal(reqStoreKey(),{}); for(const node of Object.values(all)){ if(node?.chat) delete node.chat; } for(const k of Object.keys(all)){ if(!Object.keys(all[k]||{}).length) delete all[k]; } postRequests(all);
   }
 
-  return {connect,onState,onRequests,setState,patchState,sendRequest,sendChat,publishIdentity,clearRequest,clearChat,clearAllChats,getMode:()=>mode,getUid:()=>uid,getRoom:()=>room};
+  return {connect,onState,onRequests,setState,patchState,sendRequest,sendChat,publishIdentity,clearRequest,clearChat,clearAllChats,removeOperator,getMode:()=>mode,getUid:()=>uid,getRoom:()=>room};
 })();

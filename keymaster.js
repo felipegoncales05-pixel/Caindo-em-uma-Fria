@@ -1,5 +1,5 @@
 window.OPH = window.OPH || {};
-console.info("[OPH] YUMIYA REMOTE FINAL-09 // KEYMASTER");
+console.info("[OPH] YUMIYA REMOTE FINAL-10 // KEYMASTER");
 (() => {
   let state=OPH.cloneDefault(),room=new URLSearchParams(location.search).get("room")||window.OPH_CONFIG.defaultRoom||"FRIA-01",requests={},selectedChat=null,selectedProfileUid="";
   const $=id=>document.getElementById(id);
@@ -11,6 +11,44 @@ console.info("[OPH] YUMIYA REMOTE FINAL-09 // KEYMASTER");
   function saveArchive(items){localStorage.setItem(archiveKey(),JSON.stringify(items.slice(-500)))}
   function getContacts(){try{return JSON.parse(localStorage.getItem(contactsKey())||"{}")||{}}catch(e){return{}}}
   function saveContacts(obj){localStorage.setItem(contactsKey(),JSON.stringify(obj))}
+  function normalizeContactName(v){return String(v||"").trim().replace(/\s+/g," ").toLocaleLowerCase("pt-BR")}
+  function renderContactTools(){
+    const info=$("kmContactInfo"),del=$("deleteContactBtn"),dedupe=$("dedupeContactBtn");if(!info)return;
+    const uid=$("chatTarget")?.value||"all",contacts=getContacts(),contact=contacts[uid];
+    if(uid==="all"||!contact){info.textContent="SELECIONE UM OPERADOR DIRETO PARA GERENCIAR O CONTATO.";if(del)del.disabled=true;if(dedupe)dedupe.disabled=true;return}
+    const same=Object.values(contacts).filter(c=>c.uid!==uid&&normalizeContactName(c.name)===normalizeContactName(contact.name));
+    info.textContent=`ATIVO // ${contact.name} // ${contact.playerId||"SEM P-ID"}${same.length?` // ${same.length} DUPLICADO(S) DE NOME`:""}`;
+    if(del)del.disabled=false;if(dedupe)dedupe.disabled=!same.length;
+  }
+  function dropContactLocally(uid,dropProfile=true){
+    const contacts=getContacts(),contact=contacts[uid];if(!contact)return null;
+    delete contacts[uid];saveContacts(contacts);
+    if(dropProfile&&contact.playerId&&state.comms?.operatorProfiles)delete state.comms.operatorProfiles[contact.playerId];
+    if(requests?.[uid]){const next=Object.assign({},requests);delete next[uid];requests=next}
+    if(selectedChat?.uid===uid)selectedChat=null;
+    if(selectedProfileUid===uid)selectedProfileUid="";
+    return contact;
+  }
+  async function deleteSelectedContact(){
+    const uid=$("chatTarget")?.value||"all",contact=getContacts()[uid];
+    if(uid==="all"||!contact){toast("SELECIONE UM CONTATO DIRETO");return}
+    if(!confirm(`Excluir ${contact.name} // ${contact.playerId||uid} da lista do Keymaster?\n\nIsso remove a presença/caixa desse UID e o perfil individual associado. Se o jogador ainda estiver ativo, ele poderá reaparecer quando publicar a identidade novamente.`))return;
+    dropContactLocally(uid,true);
+    await save();
+    try{await OPH.Realtime.removeOperator(uid)}catch(e){console.error(e)}
+    renderChat();renderOperatorProfiles();toast("CONTATO EXCLUÍDO");
+  }
+  async function removeNameDuplicates(){
+    const keepUid=$("chatTarget")?.value||"all",contacts=getContacts(),keep=contacts[keepUid];
+    if(keepUid==="all"||!keep){toast("SELECIONE O CONTATO QUE DEVE FICAR");return}
+    const same=Object.values(contacts).filter(c=>c.uid!==keepUid&&normalizeContactName(c.name)===normalizeContactName(keep.name));
+    if(!same.length){toast("NENHUM DUPLICADO DESSE NOME");return}
+    if(!confirm(`Manter ${keep.name} // ${keep.playerId||keepUid} e excluir ${same.length} contato(s) antigo(s) com o mesmo nome?`))return;
+    const uids=same.map(c=>c.uid);uids.forEach(uid=>dropContactLocally(uid,true));
+    await save();
+    await Promise.allSettled(uids.map(uid=>OPH.Realtime.removeOperator(uid)));
+    $("chatTarget").value=keepUid;renderChat();renderOperatorProfiles();toast(`${same.length} DUPLICADO(S) REMOVIDO(S)`);
+  }
   function rememberContacts(inbox){
     const contacts=getContacts();let changed=false;
     const seen=[];
@@ -116,6 +154,7 @@ console.info("[OPH] YUMIYA REMOTE FINAL-09 // KEYMASTER");
     $("chatTarget").innerHTML=`<option value="all">TODOS // GLOBAL</option>`+sortedContacts.map(who=>`<option value="${esc(who.uid)}">${esc(who.name)}${who.playerId?` // ${esc(who.playerId)}`:""} // DIRETO</option>`).join("");
     if([...$("chatTarget").options].some(o=>o.value===current))$("chatTarget").value=current;
     else if(selectedChat?.uid && [...$("chatTarget").options].some(o=>o.value===selectedChat.uid))$("chatTarget").value=selectedChat.uid;
+    renderContactTools();
 
     const hist=(state.comms.messages||[]).slice(-50).reverse();
     $("chatHistory").innerHTML=hist.length?hist.map(m=>{
@@ -304,17 +343,27 @@ console.info("[OPH] YUMIYA REMOTE FINAL-09 // KEYMASTER");
     const targetUid=$("chatTarget").value||"all";
     const style=$("chatStyle").value||"normal";
     const contact=getContacts()[targetUid]||{};
-    const msg={id:crypto.randomUUID?.()||String(Date.now())+Math.random(),sender:"YUMIYA KIRYUIN",text,style,targetUid,targetPlayerId:targetUid==="all"?"":(contact.playerId||""),targetName:targetUid==="all"?"GLOBAL":(contact.name||"OPERADOR"),ts:Date.now()};
-    state.comms.messages=[...(state.comms.messages||[]),msg].slice(-80);
+    const replyItem=selectedChat&&selectedChat.uid===targetUid?chatRequests().find(x=>x.uid===selectedChat.uid&&x.id===selectedChat.id):null;
+    const msg={
+      id:crypto.randomUUID?.()||String(Date.now())+Math.random(),sender:"YUMIYA KIRYUIN",text,style,targetUid,
+      targetPlayerId:targetUid==="all"?"":(contact.playerId||replyItem?.msg?.playerId||""),
+      targetName:targetUid==="all"?"GLOBAL":(contact.name||replyItem?.msg?.nickname||"OPERADOR"),
+      replyToClientMessageId:replyItem?.msg?.clientMessageId||"",
+      replyToRequestId:replyItem?.id||"",
+      replyToPlayerTs:Number(replyItem?.msg?.clientTs||replyItem?.msg?.ts)||0,
+      ts:Date.now()
+    };
+    state.comms.messages=[...(state.comms.messages||[]),msg].slice(-120);
     state.comms.processing={active:false,targetUid:"all",targetPlayerId:"",label:"PROCESSANDO SOLICITAÇÃO...",until:0};
     $("chatReply").value="";
     await save();
-    if(selectedChat && targetUid===selectedChat.uid){
-      try{await OPH.Realtime.clearChat(selectedChat.uid,selectedChat.id)}catch(e){console.error(e)}
-      removeLocalRequestChat(selectedChat.uid,selectedChat.id);selectedChat=null;renderChat();
+    if(replyItem){
+      try{await OPH.Realtime.clearChat(replyItem.uid,replyItem.id)}catch(e){console.error(e)}
+      removeLocalRequestChat(replyItem.uid,replyItem.id);selectedChat=null;renderChat();
     }
     toast(targetUid==="all"?"TRANSMISSÃO GLOBAL ENVIADA":"RESPOSTA DIRETA ENVIADA");
   }
+
   window.KM={
     connect,
     toggleVisible:(k,v)=>{state.visible[k]=v;save()},
@@ -339,6 +388,8 @@ console.info("[OPH] YUMIYA REMOTE FINAL-09 // KEYMASTER");
     exportArchive,
     clearArchive,
     clearAllChat,
+    deleteSelectedContact,
+    removeNameDuplicates,
     sendComms,
     previewMood,
     setMood,
@@ -366,5 +417,5 @@ console.info("[OPH] YUMIYA REMOTE FINAL-09 // KEYMASTER");
     }
     renderRequests();renderChat();renderOperatorProfiles()
   });
-  window.addEventListener("DOMContentLoaded",()=>{$("room").value=room;$("firebaseLogin").classList.toggle("hidden",!window.OPH_CONFIG?.firebase?.enabled);$("localLogin").classList.toggle("hidden",!!window.OPH_CONFIG?.firebase?.enabled);$("chatReply").addEventListener("keydown",e=>{if(e.key==="Enter"&&e.ctrlKey){e.preventDefault();sendComms()}});$("chatTarget")?.addEventListener("change",e=>{if(e.target.value!=="all"){selectedProfileUid=e.target.value;renderOperatorProfiles()}});render()});
+  window.addEventListener("DOMContentLoaded",()=>{$("room").value=room;$("firebaseLogin").classList.toggle("hidden",!window.OPH_CONFIG?.firebase?.enabled);$("localLogin").classList.toggle("hidden",!!window.OPH_CONFIG?.firebase?.enabled);$("chatReply").addEventListener("keydown",e=>{if(e.key==="Enter"&&e.ctrlKey){e.preventDefault();sendComms()}});$("chatTarget")?.addEventListener("change",e=>{if(e.target.value!=="all"){selectedProfileUid=e.target.value;renderOperatorProfiles()}renderContactTools()});render()});
 })();

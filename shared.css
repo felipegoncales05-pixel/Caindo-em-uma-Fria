@@ -176,3 +176,15 @@ body.yumiyaFocusActive{overflow:hidden}
   .yumiyaComposer{grid-template-columns:1fr 92px!important;padding:8px!important}
   .yumiyaIdentity b{font-size:14px!important}.yumiyaIdentity small{font-size:7px!important}
 }
+
+
+/* FINAL-10 // CONTACT MANAGER + CHAT TIMELINE */
+.kmContactTools{margin:7px 0 10px;padding:9px 10px;border:1px solid #294454;border-radius:10px;background:#061018;display:grid;gap:8px}
+.kmContactTools>span{font-size:8px;line-height:1.45;color:#7898aa;font-weight:900;letter-spacing:.06em}
+.kmContactTools .actions{gap:7px;flex-wrap:wrap}.kmContactTools .btn{font-size:8px;padding:7px 9px}.kmContactTools .btn:disabled{opacity:.35;cursor:not-allowed;filter:saturate(.4)}
+.chatMsg.player{align-self:flex-end;margin-left:auto!important;margin-right:0!important;position:relative;z-index:1}
+.chatMsg.yumiya{align-self:flex-start;margin-right:auto!important;margin-left:0!important;position:relative;z-index:1}
+.chatMsg.player.sending .chatBubble{opacity:.76;border-style:dashed}.chatMsg.player.sending .chatMeta{color:#8fb7c9}
+.chatMsg.player.failed .chatBubble{border-color:#8b3f4d;background:#1a0c11}.chatMsg.player.failed .chatMeta{color:#ff8fa0}
+.yumiyaMessages{display:flex;flex-direction:column;align-items:stretch}
+@media(max-width:700px){.kmContactTools .actions{display:grid;grid-template-columns:1fr}.kmContactTools .btn{width:100%}}
