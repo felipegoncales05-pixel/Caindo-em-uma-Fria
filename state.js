@@ -1,6 +1,7 @@
 window.OPH = window.OPH || {};
+window.OPH_BUILD = "FINAL-09";
 OPH.DEFAULT_STATE = {
-  version: 10,
+  version: 11,
   focusStage: 0,
   visible: {
     government: true,
@@ -33,7 +34,7 @@ OPH.DEFAULT_STATE = {
   comms: {
     messages: [],
     clearedAt: 0,
-    processing: { active:false, targetUid:"all", label:"PROCESSANDO SOLICITAÇÃO...", until:0 },
+    processing: { active:false, targetUid:"all", targetPlayerId:"", label:"PROCESSANDO SOLICITAÇÃO...", until:0 },
     affect: { anger:12, tension:18, portrait:"normal" },
     operatorProfiles: {}
   },

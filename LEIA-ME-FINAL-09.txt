@@ -1,0 +1,47 @@
+CAIR EM UMA FRIA — YUMIYA // REMOTE — FINAL-09
+
+ESTA É UMA BUILD FECHADA. Não misture JS/CSS de versões V5/V6/V7/V8.
+
+SUBSTITUA NO GITHUB TODOS ESTES ARQUIVOS DA BUILD:
+- index.html
+- keymaster.html
+- player.js
+- keymaster.js
+- realtime.js
+- state.js
+- shared.css
+- yumiya-normal.png
+- yumiya-medo.png
+- yumiya-envergonhada.png
+- yumiya-raiva.png
+
+MANTENHA OS SEUS ARQUIVOS ATUAIS (NÃO estão neste ZIP):
+- config.js (Firebase)
+- gm-data.js
+- player-data.js
+- n02.png
+
+IMPORTANTE: index/keymaster agora usam ?v=FINAL09 em CSS/JS para furar cache do GitHub/navegador.
+Você deve conseguir confirmar a atualização vendo FINAL-09 no cabeçalho do YUMIYA // REMOTE e no Keymaster.
+
+FUNCIONALIDADES INTEGRADAS:
+- chat compacto + Focus
+- identidade estável P-XXXXXXXXXX
+- botão RENOMEAR OPERADOR grande
+- nome do topo sincronizado ao conectar
+- caixa de entrada do Keymaster
+- resposta GLOBAL/DIRETA
+- PROCESSANDO por jogador
+- arquivar privado local + exportar JSON
+- LIMPAR A PORRA TODA preservando arquivo privado
+- RAIVA/TENSÃO/portrait global
+- perfil exclusivo por P-ID com RAIVA/TENSÃO/portrait/tom/preset
+- preset KANG com fallback aos portraits padrão
+- fallback realtime Firebase / WebSocket / BroadcastChannel
+
+PORTRAITS EXCLUSIVOS OPCIONAIS DO KANG:
+- yumiya-kang-normal.png
+- yumiya-kang-medo.png
+- yumiya-kang-envergonhada.png
+- yumiya-kang-raiva.png
+Se não existirem, o sistema usa os quatro portraits padrão.

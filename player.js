@@ -1,4 +1,5 @@
 window.OPH = window.OPH || {};
+console.info("[OPH] YUMIYA REMOTE FINAL-09 // PLAYER");
 (() => {
   let state = OPH.cloneDefault();
   let room = new URLSearchParams(location.search).get("room") || localStorage.getItem("oph-room") || window.OPH_CONFIG.defaultRoom || "FRIA-01";
@@ -137,7 +138,7 @@ window.OPH = window.OPH || {};
       const img=new Image();
       img.onload=()=>{portrait.style.setProperty("--yumiyaPortrait",`url('${src}')`);portrait.classList.add("hasPortrait")};
       img.onerror=tryNext;
-      img.src=src;
+      img.src=src+"?v=FINAL09";
     };
     tryNext();
   }
@@ -172,7 +173,7 @@ window.OPH = window.OPH || {};
     backdrop?.classList.toggle("hidden",!focusMode || !chatOpen);
     document.body.classList.toggle("yumiyaFocusActive",focusMode && chatOpen);
     if(btn){btn.classList.toggle("active",focusMode);btn.querySelector("b").textContent=focusMode?"VOLTAR AO COMPACTO":"ABRIR FOCUS"}
-    if(mode)mode.textContent=focusMode?"MODO: FOCUS":"MODO: COMPACTO";
+    if(mode)mode.textContent=focusMode?"MODO: FOCUS // FINAL-09":"MODO: COMPACTO // FINAL-09";
   }
   function toggleYumiyaFocus(force){
     focusMode=typeof force==="boolean"?force:!focusMode;
@@ -300,7 +301,8 @@ window.OPH = window.OPH || {};
     }).join("");
 
     const p=state.comms.processing||{};
-    const processing=!!p.active && (!p.until || p.until>Date.now()) && (!p.targetUid || p.targetUid==="all" || p.targetUid===playerUid);
+    const identityNow=getYumiyaIdentity();
+    const processing=!!p.active && (!p.until || p.until>Date.now()) && (!p.targetUid || p.targetUid==="all" || p.targetUid===playerUid || (!!p.targetPlayerId && identityNow?.playerId===p.targetPlayerId));
     $("yumiyaProcessing").classList.toggle("hidden",!processing);
     $("yumiyaProcessingText").textContent=p.label||"PROCESSANDO SOLICITAÇÃO...";
     $("yumiyaStatus").textContent=processing?"CONSULTANDO...":"CANAL SEGURO";

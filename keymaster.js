@@ -1,4 +1,5 @@
 window.OPH = window.OPH || {};
+console.info("[OPH] YUMIYA REMOTE FINAL-09 // KEYMASTER");
 (() => {
   let state=OPH.cloneDefault(),room=new URLSearchParams(location.search).get("room")||window.OPH_CONFIG.defaultRoom||"FRIA-01",requests={},selectedChat=null,selectedProfileUid="";
   const $=id=>document.getElementById(id);
@@ -231,7 +232,7 @@ window.OPH = window.OPH || {};
   function renderEvents(){
     $("emLevel").value=state.emergency.level||0;$("emLevelLabel").textContent=OPH.EMERGENCY_STATES[state.emergency.level||0].title;
   }
-  function render(){renderVisibility();renderApproaches();renderPreps();renderClues();renderRequests();renderChat();renderOperatorProfiles();renderAffect();renderOperatorProfiles();renderEvents();$("roomLabel").textContent=room;$("playerUrl").value=location.origin+location.pathname.replace(/keymaster\.html$/,"")+`?room=${encodeURIComponent(room)}`}
+  function render(){renderVisibility();renderApproaches();renderPreps();renderClues();renderRequests();renderChat();renderAffect();renderOperatorProfiles();renderEvents();$("roomLabel").textContent=room;$("playerUrl").value=location.origin+location.pathname.replace(/keymaster\.html$/,"")+`?room=${encodeURIComponent(room)}`}
   async function connect(){
     room=$("room").value.trim().toUpperCase()||"FRIA-01";history.replaceState(null,"",`?room=${encodeURIComponent(room)}`);
     const fb=window.OPH_CONFIG?.firebase?.enabled;
@@ -250,7 +251,7 @@ window.OPH = window.OPH || {};
       selectedProfileUid=uid;renderOperatorProfiles();
       $("chatReply").placeholder=`Responder a ${item.msg.nickname||"jogador"}...`;
     }
-    state.comms.processing={active:true,targetUid:uid,label:"PROCESSANDO SOLICITAÇÃO...",until:Date.now()+90000};
+    state.comms.processing={active:true,targetUid:uid,targetPlayerId:item?.msg?.playerId||getContacts()?.[uid]?.playerId||"",label:"PROCESSANDO SOLICITAÇÃO...",until:Date.now()+90000};
     await save();
     $("chatReply").focus();
   }
@@ -287,7 +288,7 @@ window.OPH = window.OPH || {};
   async function clearAllChat(){
     if(!confirm("LIMPAR A PORRA TODA?\n\nIsso apaga o chat ativo da Yumiya, as entradas pendentes dos jogadores e faz os clientes esconderem/apagarem o histórico local anterior. O ARQUIVO PRIVADO será preservado."))return;
     const clearedAt=Date.now();
-    state.comms.messages=[];state.comms.clearedAt=clearedAt;state.comms.processing={active:false,targetUid:"all",label:"PROCESSANDO SOLICITAÇÃO...",until:0};
+    state.comms.messages=[];state.comms.clearedAt=clearedAt;state.comms.processing={active:false,targetUid:"all",targetPlayerId:"",label:"PROCESSANDO SOLICITAÇÃO...",until:0};
     selectedChat=null;
     const pendingBeforeClear=chatRequests();
     await save();
@@ -305,7 +306,7 @@ window.OPH = window.OPH || {};
     const contact=getContacts()[targetUid]||{};
     const msg={id:crypto.randomUUID?.()||String(Date.now())+Math.random(),sender:"YUMIYA KIRYUIN",text,style,targetUid,targetPlayerId:targetUid==="all"?"":(contact.playerId||""),targetName:targetUid==="all"?"GLOBAL":(contact.name||"OPERADOR"),ts:Date.now()};
     state.comms.messages=[...(state.comms.messages||[]),msg].slice(-80);
-    state.comms.processing={active:false,targetUid:"all",label:"PROCESSANDO SOLICITAÇÃO...",until:0};
+    state.comms.processing={active:false,targetUid:"all",targetPlayerId:"",label:"PROCESSANDO SOLICITAÇÃO...",until:0};
     $("chatReply").value="";
     await save();
     if(selectedChat && targetUid===selectedChat.uid){
@@ -351,10 +352,10 @@ window.OPH = window.OPH || {};
     setOperatorTone,
     resetOperatorProfile,
     processing:async()=>{
-      state.comms.processing={active:true,targetUid:$("chatTarget").value||"all",label:"PROCESSANDO SOLICITAÇÃO...",until:Date.now()+90000};
+      const targetUid=$("chatTarget").value||"all",contact=getContacts()[targetUid]||{}; state.comms.processing={active:true,targetUid,targetPlayerId:targetUid==="all"?"":(contact.playerId||""),label:"PROCESSANDO SOLICITAÇÃO...",until:Date.now()+90000};
       await save()
     },
-    stopProcessing:async()=>{state.comms.processing={active:false,targetUid:"all",label:"PROCESSANDO SOLICITAÇÃO...",until:0};await save()}
+    stopProcessing:async()=>{state.comms.processing={active:false,targetUid:"all",targetPlayerId:"",label:"PROCESSANDO SOLICITAÇÃO...",until:0};await save()}
   };
   OPH.Realtime.onState(s=>{state=merge(s);render()});OPH.Realtime.onRequests(r=>{
     if(OPH.Realtime.getMode()==="firebase")requests=r||{};

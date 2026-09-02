@@ -127,3 +127,52 @@ body.yumiyaFocusActive{overflow:hidden}
 .kmOperatorProfilePanel{margin-top:12px;border:1px solid #304e61;border-radius:14px;background:linear-gradient(180deg,#091620,#061019);padding:14px;box-shadow:inset 0 0 35px #67dcff05}
 .kmOperatorProfileHead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px}.kmOperatorProfileHead b,.kmOperatorProfileHead small{display:block}.kmOperatorProfileHead b{font-size:15px;letter-spacing:.04em;margin-top:3px}.kmOperatorProfileHead small{margin-top:4px;color:#7895a8;font-size:8px;line-height:1.4}.kmProfileBadge{border:1px solid #334d5d;background:#071018;color:#6f8c9d;border-radius:999px;padding:6px 9px;font-size:7px;font-weight:950;letter-spacing:.1em;white-space:nowrap}.kmProfileBadge.active{border-color:#4f8aa7;color:#a9e9ff;box-shadow:0 0 18px #67dcff10}.kmOperatorSelectRow{display:grid;grid-template-columns:auto minmax(220px,1fr) auto;gap:9px;align-items:center;padding:10px;border:1px solid #213946;border-radius:11px;background:#050c12}.kmProfileToggle{display:flex;align-items:center;gap:8px;color:#91afc0;font-size:8px;font-weight:950;letter-spacing:.08em;cursor:pointer}.kmProfileToggle input{accent-color:#67dcff}.kmOperatorProfileBody{margin-top:10px;transition:.16s}.kmOperatorProfileBody.disabled{opacity:.42;filter:saturate(.55);pointer-events:none}.kmProfileSetupGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.kmOperatorAffectGrid{margin-top:10px}.kmProfileFoot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:10px;padding-top:10px;border-top:1px solid #20333f}.kmProfileFoot span{color:#7291a3;font-size:8px;line-height:1.45}.yumiyaChat.operatorExclusive .yumiyaSystemLine{border-bottom-color:#31586d}.yumiyaChat.operatorExclusive .yumiyaSystemLine span{color:#8fc8e2}.yumiyaChat[data-tone="provocative"] .yumiyaSystemLine span{letter-spacing:.16em}.yumiyaChat[data-tone="warm"] .yumiyaIdentity em{color:#91d3b1}.yumiyaChat[data-tone="cold"] .yumiyaIdentity em{color:#91b9d2}.yumiyaChat[data-tone="hostile"] .yumiyaIdentity em{color:#d49aa4}
 @media(max-width:800px){.kmOperatorSelectRow{grid-template-columns:1fr}.kmProfileSetupGrid{grid-template-columns:1fr}.kmOperatorProfileHead{flex-direction:column}.kmProfileFoot{align-items:flex-start;flex-direction:column}}
+
+
+/* =========================================================
+   FINAL-09 // HARD UI OVERRIDES
+   Mantidos no FIM do arquivo de propósito: evitam que regras
+   antigas deixem identidade/rename microscópicos novamente.
+   ========================================================= */
+.yumiyaChat{width:min(480px,calc(100vw - 20px));height:min(700px,calc(100vh - 88px))}
+.yumiyaChatHead{padding:14px 15px;gap:12px}
+.yumiyaIdentity small{font-size:8px!important;color:#8fb1c5!important}
+.yumiyaIdentity b{font-size:16px!important}
+.yumiyaIdentity em{font-size:8px!important}
+.yumiyaSystemLine{padding:9px 13px!important;font-size:8px!important}
+.yumiyaSystemLine b{font-size:8px!important;color:#9acde5!important}
+.chatSystemMsg{font-size:10px!important;line-height:1.5!important;color:#91adbd!important}
+.chatMeta{font-size:8px!important}
+.chatBubble{font-size:13px!important;line-height:1.5!important}
+.yumiyaComposer{grid-template-columns:minmax(0,1fr) 108px!important;padding:12px!important;gap:10px!important}
+.yumiyaComposer textarea{font-size:13px!important;padding:11px 12px!important;min-height:48px}
+.yumiyaComposer .btn{font-size:10px!important;min-height:48px!important;font-weight:950}
+.yumiyaFoot,.yumiyaChat.focus .yumiyaFoot{
+  display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;
+  gap:10px!important;padding:9px 10px!important;min-height:52px!important;background:#03080d!important;
+  border-top:1px solid #1b3443;color:#86a6b8!important;font-size:8px!important;letter-spacing:.08em!important;
+}
+#yumiyaOperator{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:8px!important;font-weight:950;color:#85a8bc}
+.yumiyaReidentify,.yumiyaChat.focus .yumiyaReidentify{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;
+  min-height:40px!important;min-width:156px!important;padding:9px 13px!important;border:1px solid #4b819e!important;
+  border-radius:10px!important;background:linear-gradient(180deg,#0d2230,#08141e)!important;color:#c9f2ff!important;
+  font-size:10px!important;font-weight:1000!important;letter-spacing:.07em!important;line-height:1!important;
+  box-shadow:0 0 0 1px #67dcff08,0 0 20px #67dcff0d!important;cursor:pointer!important;
+}
+.yumiyaReidentify span{font-size:14px;line-height:1;color:#67dcff}
+.yumiyaReidentify:hover{border-color:#67dcff!important;background:#102b3b!important;box-shadow:0 0 22px #67dcff20!important}
+.chatFocusBtn{min-height:38px!important;padding:0 12px!important}.chatFocusBtn b{font-size:8px!important}
+.yumiyaRenamePanel{width:min(390px,calc(100% - 22px))!important;padding:20px!important}
+.yumiyaRenamePanel h3{font-size:18px!important}.yumiyaRenamePanel p{font-size:11px!important}.yumiyaRenamePanel input{font-size:14px!important;min-height:44px!important}.yumiyaRenamePanel small{font-size:8px!important}
+.yumiyaRenameActions .btn{min-height:42px;font-size:9px}
+.kmOperatorProfilePanel{border-color:#41677d!important}.kmProfileToggle{font-size:9px!important}.kmProfileBadge{font-size:8px!important}
+.kmMoodControl label,.kmPortraitControl>label,.kmFieldLabel{font-size:9px!important}.kmPortraitButtons .btn{font-size:8px!important;padding:8px 9px!important}
+@media(max-width:600px){
+  .yumiyaChat{right:6px!important;bottom:6px!important;width:calc(100vw - 12px)!important;height:calc(100vh - 12px)!important;border-radius:14px!important}
+  .yumiyaFoot,.yumiyaChat.focus .yumiyaFoot{grid-template-columns:1fr!important;min-height:86px!important;padding:8px!important}
+  #yumiyaOperator{text-align:center;font-size:8px!important}
+  .yumiyaReidentify,.yumiyaChat.focus .yumiyaReidentify{width:100%!important;min-width:0!important;min-height:42px!important;font-size:10px!important}
+  .yumiyaComposer{grid-template-columns:1fr 92px!important;padding:8px!important}
+  .yumiyaIdentity b{font-size:14px!important}.yumiyaIdentity small{font-size:7px!important}
+}
