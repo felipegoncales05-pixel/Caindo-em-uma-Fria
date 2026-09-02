@@ -1,7 +1,6 @@
 window.DCX = window.DCX || {};
 (() => {
-  const BUILD = "DCX-OS-A2-RECOVERY";
-  const ADMIN_UID = "1uVVp67PW7c53fs6dstTDNE46Nz1";
+  const BUILD = "DCX-OS-A2.1-AUTHFIX";
   const $ = id => document.getElementById(id);
   const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const teamStatuses = ["OPERACIONAL","EM MISSÃO","EM COMBATE","REAGRUPANDO","EVACUANDO","SEM COMUNICAÇÃO","INATIVA"];
@@ -32,7 +31,6 @@ window.DCX = window.DCX || {};
   function presenceState(p){if(!p?.lastSeen)return{label:"OFFLINE",cls:"offline"};const age=Date.now()-Number(p.lastSeen||0);if(age>90000)return{label:"OFFLINE",cls:"offline"};if(p.visibility==="hidden")return{label:"OUTRA GUIA / MINIMIZADO",cls:"hiddenTab"};if(p.focused===false)return{label:"SEM FOCO",cls:"away"};if(age>45000)return{label:"INATIVO",cls:"away"};return{label:"ATIVO",cls:"online"}}
   function options(vals,current){return vals.map(v=>`<option value="${esc(v)}" ${v===current?"selected":""}>${esc(v)}</option>`).join("")}
   function ready(){if(!initialized||!db){toast("DCX OS // AGUARDE A SINCRONIZAÇÃO");return false}return true}
-  function adminUser(){return auth?.currentUser?.uid===ADMIN_UID}
 
   function isEditing(){const a=document.activeElement;if(!a)return false;return !!a.closest?.('.kmWorkspaceView')&&["INPUT","SELECT","TEXTAREA"].includes(a.tagName)}
   function scheduleRender(){if(isEditing()){pendingRender=true;return}if(renderQueued)return;renderQueued=true;requestAnimationFrame(()=>{renderQueued=false;renderAll()})}
@@ -102,7 +100,7 @@ window.DCX = window.DCX || {};
     try{
       if(!window.firebase?.apps?.length){console.warn("DCX Admin aguardando Firebase");return false}
       auth=firebase.auth();if(!auth.currentUser){console.warn("DCX Admin aguardando login Keymaster");return false}
-      if(auth.currentUser.uid!==ADMIN_UID){console.warn("DCX Admin: UID não autorizado",auth.currentUser.uid);toast("DCX OS // UID DO KEYMASTER NÃO AUTORIZADO");return false}
+      console.info("DCX Admin // Firebase Auth UID",auth.currentUser.uid);
       const target=window.OPH?.Realtime?.getRoom?.()||room;if(initialized&&!force&&target===room)return true;
       refs.forEach(r=>{try{r.off()}catch(e){}});refs=[];clearInterval(heartbeatInterval);initialized=false;
       db=firebase.database();room=target;base=`rooms/${room}/dcx`;initialized=true;
@@ -112,7 +110,7 @@ window.DCX = window.DCX || {};
       await ref("meta").update({initialized:true,schemaVersion:2,systemName:"DCX OS",roomId:room,lastKeymasterBuild:BUILD,lastKeymasterSeen:now()});
       const pub=await ref("access/public").once("value");if(!pub.exists())await ref("access/public").set({requireKey:false,allowNewPlayers:true,approvalRequired:false,updatedAt:now()});
       await syncExistingPlayers();renderAll();heartbeatInterval=setInterval(renderMaster,5000);toast("DCX OS A2 // SINCRONIZADO");return true;
-    }catch(e){console.error("DCX Admin init",e);initialized=false;toast("DCX OS // FALHA DE INICIALIZAÇÃO");return false}
+    }catch(e){console.error("DCX Admin init",e);initialized=false;const code=String(e?.code||"").toUpperCase();toast(code.includes("PERMISSION")?"DCX OS // FIREBASE NEGOU O ACESSO":"DCX OS // FALHA DE INICIALIZAÇÃO");return false}
   }
   function renderAll(){renderTabs();if(activeTab==="master")renderMaster();if(activeTab==="players")renderPlayers();if(activeTab==="teams")renderTeams();if(activeTab==="notes")renderNotes()}
   function copyPlayerLink(){const input=$("playerUrl");if(!input)return;navigator.clipboard?.writeText(input.value).then(()=>toast("LINK COPIADO")).catch(()=>{input.select();document.execCommand("copy");toast("LINK COPIADO")})}
