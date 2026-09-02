@@ -1,0 +1,11 @@
+PLAYER HUB V2 — FIX VISUAL + INTERAÇÃO
+
+Substitua/adicione no GitHub:
+- index.html
+- player-hub.css
+- player-hub.js
+
+Não altera Firebase, Rules, Auth, UID, Keymaster ou realtime.
+
+Validação visual no Console:
+[DCX OS] PLAYER HUB V2 // CSS ISOLADO // INTERACTION BIND OK

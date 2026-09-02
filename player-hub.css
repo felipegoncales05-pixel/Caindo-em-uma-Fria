@@ -1,0 +1,71 @@
+/* PLAYER HUB V2 — isolated presentation layer. No Firebase/Auth rules. */
+#playerWorkspaceBar,
+#workspaceGolpe,
+#workspaceDCX{position:relative;z-index:10;pointer-events:auto!important}
+
+.playerWorkspaceBar{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+  gap:10px!important;
+  padding:10px 0 0!important;
+  width:100%!important;
+  max-width:none!important;
+  margin:0!important;
+}
+.playerWorkspaceTab{
+  appearance:none!important;-webkit-appearance:none!important;
+  position:relative!important;display:grid!important;
+  grid-template-columns:auto minmax(0,1fr)!important;
+  grid-template-rows:auto auto!important;
+  column-gap:14px!important;align-items:center!important;
+  width:100%!important;min-width:0!important;
+  text-align:left!important;
+  border:1px solid #294657!important;
+  background:linear-gradient(180deg,#07151e,#040b10)!important;
+  color:#89a7b5!important;border-radius:13px!important;
+  padding:12px 15px!important;cursor:pointer!important;
+  pointer-events:auto!important;user-select:none!important;
+  opacity:1!important;filter:none!important;
+  transition:border-color .15s ease,background .15s ease,transform .15s ease!important;
+}
+.playerWorkspaceTab:hover{border-color:#4f8198!important;background:#091c26!important;transform:translateY(-1px)}
+.playerWorkspaceTab.active{border-color:#67dcff!important;background:linear-gradient(180deg,#0a2330,#06151d)!important;box-shadow:inset 0 0 0 1px #67dcff20,0 8px 28px #0006!important}
+.playerWorkspaceTab small{grid-column:1!important;display:block!important;color:#6d9aad!important;font:900 8px/1 ui-monospace,monospace!important;letter-spacing:.12em!important}
+.playerWorkspaceTab b{grid-column:1!important;display:block!important;color:#d7edf5!important;font:1000 19px/1 ui-monospace,monospace!important;letter-spacing:.055em!important;margin-top:5px!important}
+.playerWorkspaceTab span{grid-column:2!important;grid-row:1/3!important;display:block!important;justify-self:end!important;color:#668593!important;font:900 9px/1.25 ui-monospace,monospace!important;letter-spacing:.07em!important;text-align:right!important}
+.playerWorkspaceTab.active small{color:#75ddfa!important}.playerWorkspaceTab.active b{color:#effcff!important}
+.playerWorkspaceTab i{position:absolute!important;right:9px!important;top:7px!important;min-width:18px!important;height:18px!important;padding:0 4px!important;display:grid!important;place-items:center!important;border-radius:999px!important;background:#f05c72!important;color:#fff!important;font:1000 8px ui-monospace,monospace!important;font-style:normal!important}
+.playerWorkspaceTab i.hidden{display:none!important}
+
+.playerWorkspacePane{display:none!important;pointer-events:none!important}
+.playerWorkspacePane.active{display:block!important;pointer-events:auto!important}
+#workspaceGolpe.active .nav,#workspaceGolpe.active .screen{pointer-events:auto!important}
+
+.dcxWorkspace{padding:18px 0 34px!important;width:100%!important;max-width:none!important;margin:0!important;box-sizing:border-box!important;color:#e9f7fd!important}
+.dcxWorkspaceHero{display:flex!important;justify-content:space-between!important;gap:24px!important;align-items:center!important;border:1px solid #284c5e!important;background:radial-gradient(circle at 86% 18%,#0c3141 0,#071923 28%,#040d13 72%)!important;border-radius:18px!important;padding:25px 27px!important;overflow:hidden!important;position:relative!important;pointer-events:auto!important}
+.dcxWorkspaceHero h1{margin:6px 0 9px!important;font:1000 clamp(32px,5vw,66px)/.92 ui-monospace,monospace!important;letter-spacing:-.05em!important;color:#ecfbff!important}
+.dcxWorkspaceHero p{margin:0!important;max-width:760px!important;color:#93acb8!important;font:11px/1.65 ui-monospace,monospace!important}
+.dcxWorkspaceSeal{flex:0 0 126px!important;aspect-ratio:1!important;border:1px solid #4d8297!important;border-radius:50%!important;display:grid!important;place-items:center!important;align-content:center!important;background:#06151d!important;box-shadow:inset 0 0 30px #62d7ff14,0 0 60px #52ccff0c!important}
+.dcxWorkspaceSeal span{font:1000 32px/1 ui-monospace,monospace!important;color:#73ddff!important}.dcxWorkspaceSeal small{font:900 7px ui-monospace,monospace!important;color:#678998!important;letter-spacing:.16em!important;margin-top:7px!important}
+.dcxWorkspaceGrid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:11px!important;margin-top:12px!important;pointer-events:auto!important}
+.dcxModuleCard{
+  appearance:none!important;-webkit-appearance:none!important;
+  position:relative!important;display:grid!important;
+  grid-template-columns:54px minmax(0,1fr) auto!important;
+  gap:14px!important;align-items:center!important;text-align:left!important;
+  width:100%!important;min-height:110px!important;
+  border:1px solid #284552!important;border-radius:14px!important;
+  background:#061118!important;color:#d7edf5!important;padding:15px!important;
+  opacity:1!important;filter:none!important;pointer-events:auto!important;
+}
+button.dcxModuleCard.live{cursor:pointer!important;transition:.15s ease!important}
+button.dcxModuleCard.live:hover{transform:translateY(-1px)!important;border-color:#62cee9!important;background:#081b24!important;box-shadow:0 12px 32px #0006!important}
+.dcxModuleCard.future{opacity:.5!important;background:#050b0f!important;pointer-events:none!important}
+.dcxModuleIcon{width:52px!important;height:52px!important;border:1px solid #396174!important;border-radius:13px!important;display:grid!important;place-items:center!important;color:#71d9f4!important;background:#081923!important;font:1000 14px ui-monospace,monospace!important}
+.dcxModuleCard small,.dcxModuleCard b,.dcxModuleCard p{display:block!important}.dcxModuleCard small{color:#6d91a1!important;font:900 7px ui-monospace,monospace!important;letter-spacing:.1em!important}.dcxModuleCard b{font:1000 15px ui-monospace,monospace!important;margin-top:5px!important;color:#ddf6ff!important}.dcxModuleCard p{margin:5px 0 0!important;color:#86a0ac!important;font:9px/1.5 ui-monospace,monospace!important}.dcxModuleState{font:900 7px ui-monospace,monospace!important;font-style:normal!important;color:#83cce1!important;border:1px solid #315667!important;border-radius:999px!important;padding:6px 8px!important;white-space:nowrap!important}.dcxModuleCard.future .dcxModuleState{color:#6c7f88!important;border-color:#2b363c!important}
+.dcxWorkspaceFoot{display:flex!important;justify-content:space-between!important;gap:16px!important;margin-top:10px!important;border-top:1px solid #18313d!important;padding:12px 4px!important;color:#617d89!important;font:8px ui-monospace,monospace!important}.dcxWorkspaceFoot b{color:#76a5b8!important}
+.player-hub-ready .yumiyaLauncher,.player-hub-ready .dcxDock{display:none!important}
+
+@media(max-width:760px){
+  .playerWorkspaceBar{grid-template-columns:1fr!important}.playerWorkspaceTab span{font-size:7px!important}.dcxWorkspaceGrid{grid-template-columns:1fr!important}.dcxWorkspaceHero{align-items:flex-start!important}.dcxWorkspaceSeal{display:none!important}.dcxModuleCard{grid-template-columns:46px minmax(0,1fr)!important}.dcxModuleState{grid-column:2!important;justify-self:start!important}.dcxWorkspaceFoot{display:grid!important}
+}
