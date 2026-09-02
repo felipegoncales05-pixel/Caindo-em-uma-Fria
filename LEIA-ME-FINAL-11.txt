@@ -1,0 +1,35 @@
+CAIR EM UMA FRIA — YUMIYA // REMOTE FINAL-11
+
+BUILD FECHADA. Não misture JS/CSS de versões anteriores.
+
+SUBSTITUA NA RAIZ DO GITHUB:
+- index.html
+- keymaster.html
+- player.js
+- keymaster.js
+- realtime.js
+- state.js
+- shared.css
+- yumiya-normal.png
+- yumiya-medo.png
+- yumiya-envergonhada.png
+- yumiya-raiva.png
+- yumiya-feliz.png
+
+MANTENHA OS SEUS:
+- config.js
+- gm-data.js
+- player-data.js
+- n02.png
+
+FINAL-11:
+- Timeline canônica sequencial controlada pelo Keymaster.
+- Mensagem do jogador é espelhada no state antes da resposta.
+- Resposta não pode subir acima da pergunta por divergência de relógio.
+- Eco local continua aparecendo imediatamente enquanto aguarda o espelhamento.
+- Nova barra EUFORIA global e individual.
+- Novo portrait FELIZ: yumiya-feliz.png.
+- Presets individuais procuram também yumiya-<preset>-feliz.png e usam o feliz padrão como fallback.
+- Limpeza usa clearVersion, não relógio, para invalidar o histórico local.
+
+CONFIRA NA TELA: FINAL-11.

@@ -145,7 +145,7 @@ OPH.Realtime = (() => {
   async function publishIdentity(identity){
     const req={type:"identity",nickname:String(identity?.nickname||"").trim().slice(0,40),playerId:String(identity?.playerId||"").trim().slice(0,32),ts:Date.now()};
     if(!req.nickname || !req.playerId) return;
-    if(mode==="firebase") return db.ref(`rooms/${room}/requests/${uid}/identity`).set(req);
+    if(mode==="firebase"){ req.serverTs=firebase.database.ServerValue.TIMESTAMP; return db.ref(`rooms/${room}/requests/${uid}/identity`).set(req); }
     if(mode==="ws"){ ws.send(JSON.stringify({type:"identity_update",identity:req})); return; }
     const all=readLocal(reqStoreKey(),{}); all[uid]=Object.assign({},all[uid]||{},{identity:req}); postRequests(all);
   }
@@ -155,7 +155,7 @@ OPH.Realtime = (() => {
     const clientMessageId=String(req?.clientMessageId||"").slice(0,96);
     req=Object.assign({},req,{type:"chat",clientTs,clientMessageId,ts:Date.now()});
     if(mode==="firebase"){
-      const ref=db.ref(`rooms/${room}/requests/${uid}/chat`).push(); req.id=ref.key; await ref.set(req); return req.id;
+      const ref=db.ref(`rooms/${room}/requests/${uid}/chat`).push(); req.id=ref.key; req.serverTs=firebase.database.ServerValue.TIMESTAMP; await ref.set(req); return req.id;
     }
     if(mode==="ws"){ ws.send(JSON.stringify({type:"chat_request",request:req})); return "ws-"+Date.now(); }
     const id="local-"+Date.now()+"-"+Math.random().toString(36).slice(2,6); req.id=id;

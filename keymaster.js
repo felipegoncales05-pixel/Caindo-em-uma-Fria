@@ -1,7 +1,7 @@
 window.OPH = window.OPH || {};
-console.info("[OPH] YUMIYA REMOTE FINAL-10 // KEYMASTER");
+console.info("[OPH] YUMIYA REMOTE FINAL-11 // KEYMASTER");
 (() => {
-  let state=OPH.cloneDefault(),room=new URLSearchParams(location.search).get("room")||window.OPH_CONFIG.defaultRoom||"FRIA-01",requests={},selectedChat=null,selectedProfileUid="";
+  let state=OPH.cloneDefault(),stateLoaded=false,timelineSyncing=false,suppressTimelineSync=false,room=new URLSearchParams(location.search).get("room")||window.OPH_CONFIG.defaultRoom||"FRIA-01",requests={},selectedChat=null,selectedProfileUid="";
   const $=id=>document.getElementById(id);
   function toast(t){const e=$("toast");e.textContent=t;e.classList.add("show");setTimeout(()=>e.classList.remove("show"),1600)}
   function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
@@ -44,7 +44,7 @@ console.info("[OPH] YUMIYA REMOTE FINAL-10 // KEYMASTER");
     const same=Object.values(contacts).filter(c=>c.uid!==keepUid&&normalizeContactName(c.name)===normalizeContactName(keep.name));
     if(!same.length){toast("NENHUM DUPLICADO DESSE NOME");return}
     if(!confirm(`Manter ${keep.name} // ${keep.playerId||keepUid} e excluir ${same.length} contato(s) antigo(s) com o mesmo nome?`))return;
-    const uids=same.map(c=>c.uid);uids.forEach(uid=>dropContactLocally(uid,true));
+    const uids=same.map(c=>c.uid);uids.forEach(uid=>dropContactLocally(uid,contacts[uid]?.playerId!==keep.playerId));
     await save();
     await Promise.allSettled(uids.map(uid=>OPH.Realtime.removeOperator(uid)));
     $("chatTarget").value=keepUid;renderChat();renderOperatorProfiles();toast(`${same.length} DUPLICADO(S) REMOVIDO(S)`);
@@ -96,11 +96,33 @@ console.info("[OPH] YUMIYA REMOTE FINAL-10 // KEYMASTER");
       emergency:Object.assign(d.emergency,s?.emergency||{}),
       comms:Object.assign(d.comms,s?.comms||{}, {
         messages:Array.isArray(s?.comms?.messages)?s.comms.messages:[],
+        timeline:Array.isArray(s?.comms?.timeline)?s.comms.timeline:[],
+        sequence:Number(s?.comms?.sequence)||0,
+        clearVersion:Number(s?.comms?.clearVersion)||0,
         processing:Object.assign(d.comms.processing,s?.comms?.processing||{}),
         affect:Object.assign(d.comms.affect,s?.comms?.affect||{}),
         operatorProfiles:Object.assign({},d.comms.operatorProfiles||{},s?.comms?.operatorProfiles||{})
       })
     })
+  }
+  function timeline(){state.comms.timeline=Array.isArray(state.comms.timeline)?state.comms.timeline:[];return state.comms.timeline}
+  function nextSeq(){state.comms.sequence=Math.max(Number(state.comms.sequence)||0,...timeline().map(e=>Number(e.seq)||0))+1;return state.comms.sequence}
+  function playerCanonicalId(item){return String(item?.msg?.clientMessageId||(`request-${item?.uid||"unknown"}-${item?.id||"unknown"}`))}
+  function appendIncomingCanonical(item){
+    if(!item?.msg)return false;
+    const cid=playerCanonicalId(item);
+    if(timeline().some(e=>e.kind==="player"&&(e.clientMessageId===cid||e.id===`player:${cid}`)))return false;
+    timeline().push({id:`player:${cid}`,kind:"player",seq:nextSeq(),uid:item.uid,requestId:item.id,playerId:item.msg.playerId||"",nickname:item.msg.nickname||"Jogador",text:item.msg.text||"",clientMessageId:cid,clientTs:Number(item.msg.clientTs)||0,serverTs:Number(item.msg.serverTs)||Number(item.msg.ts)||Date.now(),ts:Number(item.msg.serverTs)||Number(item.msg.ts)||Date.now()});
+    state.comms.timeline=timeline().slice(-500);
+    return true;
+  }
+  async function syncIncomingTimeline(){
+    if(!stateLoaded||timelineSyncing||suppressTimelineSync)return;
+    const items=chatRequests().slice().sort((a,b)=>(Number(a.msg.serverTs||a.msg.ts)||0)-(Number(b.msg.serverTs||b.msg.ts)||0));
+    let changed=false;items.forEach(item=>{if(appendIncomingCanonical(item))changed=true});
+    if(!changed)return;
+    timelineSyncing=true;
+    try{await OPH.Realtime.setState(state)}catch(e){console.error("Falha ao sincronizar timeline canônica",e)}finally{timelineSyncing=false}
   }
   async function save(){await OPH.Realtime.setState(state);render()}
   function renderVisibility(){
@@ -156,7 +178,8 @@ console.info("[OPH] YUMIYA REMOTE FINAL-10 // KEYMASTER");
     else if(selectedChat?.uid && [...$("chatTarget").options].some(o=>o.value===selectedChat.uid))$("chatTarget").value=selectedChat.uid;
     renderContactTools();
 
-    const hist=(state.comms.messages||[]).slice(-50).reverse();
+    const canonicalOutgoing=(state.comms.timeline||[]).filter(m=>m?.kind==="yumiya");
+    const hist=(canonicalOutgoing.length?canonicalOutgoing:(state.comms.messages||[])).slice(-50).reverse();
     $("chatHistory").innerHTML=hist.length?hist.map(m=>{
       const contact=contacts[m.targetUid]||{};
       const target=m.targetUid==="all"||!m.targetUid?"GLOBAL":`DIRETO // ${m.targetName||contact.name||m.targetPlayerId||"OPERADOR"}`;
@@ -176,27 +199,29 @@ console.info("[OPH] YUMIYA REMOTE FINAL-10 // KEYMASTER");
   }
   function clampMood(v){return Math.max(0,Math.min(100,Math.round(Number(v)||0)))}
   function renderAffect(){
-    const a=state.comms.affect||{anger:12,tension:18,portrait:"normal"};
-    const anger=clampMood(a.anger),tension=clampMood(a.tension),portrait=["normal","fear","embarrassed","anger"].includes(a.portrait)?a.portrait:"normal";
+    const a=state.comms.affect||{anger:12,tension:18,euphoria:10,portrait:"normal"};
+    const anger=clampMood(a.anger),tension=clampMood(a.tension),euphoria=clampMood(a.euphoria),portrait=["normal","fear","embarrassed","anger","happy"].includes(a.portrait)?a.portrait:"normal";
     if($("yumiyaAngerCtl"))$("yumiyaAngerCtl").value=anger;
     if($("yumiyaTensionCtl"))$("yumiyaTensionCtl").value=tension;
+    if($("yumiyaEuphoriaCtl"))$("yumiyaEuphoriaCtl").value=euphoria;
     if($("yumiyaAngerValue"))$("yumiyaAngerValue").textContent=anger+"%";
     if($("yumiyaTensionValue"))$("yumiyaTensionValue").textContent=tension+"%";
+    if($("yumiyaEuphoriaValue"))$("yumiyaEuphoriaValue").textContent=euphoria+"%";
     document.querySelectorAll("#yumiyaPortraitCtl [data-portrait]").forEach(b=>b.classList.toggle("gold",b.dataset.portrait===portrait));
   }
   function previewMood(kind,value){
-    const v=clampMood(value),out=$(kind==="anger"?"yumiyaAngerValue":"yumiyaTensionValue");
+    const v=clampMood(value),ids={anger:"yumiyaAngerValue",tension:"yumiyaTensionValue",euphoria:"yumiyaEuphoriaValue"},out=$(ids[kind]);
     if(out)out.textContent=v+"%";
   }
   async function setMood(kind,value){
-    if(!["anger","tension"].includes(kind))return;
-    state.comms.affect=Object.assign({anger:12,tension:18,portrait:"normal"},state.comms.affect||{});
+    if(!["anger","tension","euphoria"].includes(kind))return;
+    state.comms.affect=Object.assign({anger:12,tension:18,euphoria:10,portrait:"normal"},state.comms.affect||{});
     state.comms.affect[kind]=clampMood(value);
     await save();
   }
   async function setPortrait(portrait){
-    if(!["normal","fear","embarrassed","anger"].includes(portrait))return;
-    state.comms.affect=Object.assign({anger:12,tension:18,portrait:"normal"},state.comms.affect||{});
+    if(!["normal","fear","embarrassed","anger","happy"].includes(portrait))return;
+    state.comms.affect=Object.assign({anger:12,tension:18,euphoria:10,portrait:"normal"},state.comms.affect||{});
     state.comms.affect.portrait=portrait;
     await save();
     toast("PORTRAIT // "+portrait.toUpperCase());
@@ -208,9 +233,9 @@ console.info("[OPH] YUMIYA REMOTE FINAL-10 // KEYMASTER");
   }
   function profileKey(contact){return contact?.playerId||""}
   function defaultOperatorProfile(contact){
-    const base=state.comms.affect||{anger:12,tension:18,portrait:"normal"};
+    const base=state.comms.affect||{anger:12,tension:18,euphoria:10,portrait:"normal"};
     const isKang=/^kang(?:\s|$)/i.test(contact?.name||"");
-    return {enabled:true,preset:isKang?"kang":"standard",tone:isKang?"provocative":"professional",anger:clampMood(base.anger),tension:clampMood(base.tension),portrait:base.portrait||"normal",updatedAt:Date.now()};
+    return {enabled:true,preset:isKang?"kang":"standard",tone:isKang?"provocative":"professional",anger:clampMood(base.anger),tension:clampMood(base.tension),euphoria:clampMood(base.euphoria),portrait:base.portrait||"normal",updatedAt:Date.now()};
   }
   function getOperatorProfile(contact,create=false){
     const key=profileKey(contact);if(!key)return null;
@@ -236,15 +261,15 @@ console.info("[OPH] YUMIYA REMOTE FINAL-10 // KEYMASTER");
     if(enabled)enabled.checked=active;
     body?.classList.toggle("disabled",!active);
     if(status){status.textContent=active?`EXCLUSIVO // ${contact.name}`:`GLOBAL // ${contact.name}`;status.classList.toggle("active",active)}
-    const base=state.comms.affect||{anger:12,tension:18,portrait:"normal"};
-    const view=Object.assign({preset:"standard",tone:"professional",anger:base.anger,tension:base.tension,portrait:base.portrait||"normal"},p||{});
+    const base=state.comms.affect||{anger:12,tension:18,euphoria:10,portrait:"normal"};
+    const view=Object.assign({preset:"standard",tone:"professional",anger:base.anger,tension:base.tension,euphoria:base.euphoria,portrait:base.portrait||"normal"},p||{});
     if($("operatorPreset"))$("operatorPreset").value=["standard","kang"].includes(view.preset)?view.preset:"standard";
     if($("operatorTone"))$("operatorTone").value=["professional","warm","provocative","cold","hostile"].includes(view.tone)?view.tone:"professional";
-    const anger=clampMood(view.anger),tension=clampMood(view.tension);
-    if($("operatorAngerCtl"))$("operatorAngerCtl").value=anger;if($("operatorTensionCtl"))$("operatorTensionCtl").value=tension;
-    if($("operatorAngerValue"))$("operatorAngerValue").textContent=anger+"%";if($("operatorTensionValue"))$("operatorTensionValue").textContent=tension+"%";
+    const anger=clampMood(view.anger),tension=clampMood(view.tension),euphoria=clampMood(view.euphoria);
+    if($("operatorAngerCtl"))$("operatorAngerCtl").value=anger;if($("operatorTensionCtl"))$("operatorTensionCtl").value=tension;if($("operatorEuphoriaCtl"))$("operatorEuphoriaCtl").value=euphoria;
+    if($("operatorAngerValue"))$("operatorAngerValue").textContent=anger+"%";if($("operatorTensionValue"))$("operatorTensionValue").textContent=tension+"%";if($("operatorEuphoriaValue"))$("operatorEuphoriaValue").textContent=euphoria+"%";
     document.querySelectorAll("#operatorPortraitCtl [data-portrait]").forEach(b=>b.classList.toggle("gold",b.dataset.portrait===(view.portrait||"normal")));
-    if($("operatorAssetHint"))$("operatorAssetHint").textContent=view.preset==="kang"?"Kang procura yumiya-kang-normal/medo/envergonhada/raiva.png e cai nos portraits padrão se não encontrar.":"Preset padrão usa os quatro portraits atuais da Yumiya.";
+    if($("operatorAssetHint"))$("operatorAssetHint").textContent=view.preset==="kang"?"Kang procura yumiya-kang-normal/medo/envergonhada/raiva/feliz.png e cai nos portraits padrão se não encontrar.":"Preset padrão usa os cinco portraits atuais da Yumiya.";
   }
   function selectOperatorProfile(uid){selectedProfileUid=uid||"";renderOperatorProfiles()}
   async function toggleOperatorProfile(on){
@@ -252,12 +277,12 @@ console.info("[OPH] YUMIYA REMOTE FINAL-10 // KEYMASTER");
     const key=profileKey(contact);if(!key){toast("OPERADOR SEM P-ID");return}
     const p=getOperatorProfile(contact,true);p.enabled=!!on;p.updatedAt=Date.now();await save();toast(on?"PERFIL INDIVIDUAL ATIVADO":"OPERADOR VOLTOU AO GLOBAL");
   }
-  function previewOperatorMood(kind,value){const v=clampMood(value),out=$(kind==="anger"?"operatorAngerValue":"operatorTensionValue");if(out)out.textContent=v+"%"}
+  function previewOperatorMood(kind,value){const v=clampMood(value),ids={anger:"operatorAngerValue",tension:"operatorTensionValue",euphoria:"operatorEuphoriaValue"},out=$(ids[kind]);if(out)out.textContent=v+"%"}
   async function setOperatorMood(kind,value){
-    if(!["anger","tension"].includes(kind))return;const contact=selectedProfileContact();if(!contact)return;const p=getOperatorProfile(contact,true);p.enabled=true;p[kind]=clampMood(value);p.updatedAt=Date.now();await save();
+    if(!["anger","tension","euphoria"].includes(kind))return;const contact=selectedProfileContact();if(!contact)return;const p=getOperatorProfile(contact,true);p.enabled=true;p[kind]=clampMood(value);p.updatedAt=Date.now();await save();
   }
   async function setOperatorPortrait(portrait){
-    if(!["normal","fear","embarrassed","anger"].includes(portrait))return;const contact=selectedProfileContact();if(!contact)return;const p=getOperatorProfile(contact,true);p.enabled=true;p.portrait=portrait;p.updatedAt=Date.now();await save();toast(`PORTRAIT INDIVIDUAL // ${contact.name.toUpperCase()}`);
+    if(!["normal","fear","embarrassed","anger","happy"].includes(portrait))return;const contact=selectedProfileContact();if(!contact)return;const p=getOperatorProfile(contact,true);p.enabled=true;p.portrait=portrait;p.updatedAt=Date.now();await save();toast(`PORTRAIT INDIVIDUAL // ${contact.name.toUpperCase()}`);
   }
   async function setOperatorPreset(preset){
     if(!["standard","kang"].includes(preset))return;const contact=selectedProfileContact();if(!contact)return;const p=getOperatorProfile(contact,true);p.enabled=true;p.preset=preset;p.updatedAt=Date.now();if(preset==="kang"&&p.tone==="professional")p.tone="provocative";await save();toast(`PRESET // ${preset.toUpperCase()}`);
@@ -307,7 +332,7 @@ console.info("[OPH] YUMIYA REMOTE FINAL-10 // KEYMASTER");
     renderChat();toast("MENSAGEM DESCARTADA");
   }
   function archiveOutgoing(id){
-    const m=(state.comms.messages||[]).find(x=>String(x.id)===String(id));if(!m)return;
+    const m=(state.comms.timeline||[]).find(x=>x?.kind==="yumiya"&&String(x.id)===String(id))||(state.comms.messages||[]).find(x=>String(x.id)===String(id));if(!m)return;
     addArchive({direction:"outgoing",targetUid:m.targetUid||"all",targetPlayerId:m.targetPlayerId||"",targetName:m.targetName||"",text:m.text,style:m.style||"normal",ts:m.ts||Date.now()});
     toast("TRANSMISSÃO ARQUIVADA // PRIVADO");
   }
@@ -327,7 +352,8 @@ console.info("[OPH] YUMIYA REMOTE FINAL-10 // KEYMASTER");
   async function clearAllChat(){
     if(!confirm("LIMPAR A PORRA TODA?\n\nIsso apaga o chat ativo da Yumiya, as entradas pendentes dos jogadores e faz os clientes esconderem/apagarem o histórico local anterior. O ARQUIVO PRIVADO será preservado."))return;
     const clearedAt=Date.now();
-    state.comms.messages=[];state.comms.clearedAt=clearedAt;state.comms.processing={active:false,targetUid:"all",targetPlayerId:"",label:"PROCESSANDO SOLICITAÇÃO...",until:0};
+    suppressTimelineSync=true;
+    state.comms.messages=[];state.comms.timeline=[];state.comms.sequence=0;state.comms.clearVersion=(Number(state.comms.clearVersion)||0)+1;state.comms.clearedAt=clearedAt;state.comms.processing={active:false,targetUid:"all",targetPlayerId:"",label:"PROCESSANDO SOLICITAÇÃO...",until:0};
     selectedChat=null;
     const pendingBeforeClear=chatRequests();
     await save();
@@ -336,6 +362,7 @@ console.info("[OPH] YUMIYA REMOTE FINAL-10 // KEYMASTER");
       else await OPH.Realtime.clearAllChats();
     }catch(e){console.error(e)}
     const next={};for(const [uid,node] of Object.entries(requests||{})){const copy=Object.assign({},node);delete copy.chat;if(Object.keys(copy).length)next[uid]=copy}requests=next;
+    suppressTimelineSync=false;
     renderChat();toast("CHAT ATIVO LIMPO");
   }
   async function sendComms(){
@@ -344,8 +371,10 @@ console.info("[OPH] YUMIYA REMOTE FINAL-10 // KEYMASTER");
     const style=$("chatStyle").value||"normal";
     const contact=getContacts()[targetUid]||{};
     const replyItem=selectedChat&&selectedChat.uid===targetUid?chatRequests().find(x=>x.uid===selectedChat.uid&&x.id===selectedChat.id):null;
+    // Se for uma resposta, a pergunta entra primeiro na timeline canônica, no mesmo write do host.
+    if(replyItem)appendIncomingCanonical(replyItem);
     const msg={
-      id:crypto.randomUUID?.()||String(Date.now())+Math.random(),sender:"YUMIYA KIRYUIN",text,style,targetUid,
+      id:crypto.randomUUID?.()||String(Date.now())+Math.random(),kind:"yumiya",seq:nextSeq(),sender:"YUMIYA KIRYUIN",text,style,targetUid,
       targetPlayerId:targetUid==="all"?"":(contact.playerId||replyItem?.msg?.playerId||""),
       targetName:targetUid==="all"?"GLOBAL":(contact.name||replyItem?.msg?.nickname||"OPERADOR"),
       replyToClientMessageId:replyItem?.msg?.clientMessageId||"",
@@ -353,6 +382,8 @@ console.info("[OPH] YUMIYA REMOTE FINAL-10 // KEYMASTER");
       replyToPlayerTs:Number(replyItem?.msg?.clientTs||replyItem?.msg?.ts)||0,
       ts:Date.now()
     };
+    timeline().push(msg);state.comms.timeline=timeline().slice(-500);
+    // Compatibilidade temporária com clients antigos; FINAL-11 usa timeline.
     state.comms.messages=[...(state.comms.messages||[]),msg].slice(-120);
     state.comms.processing={active:false,targetUid:"all",targetPlayerId:"",label:"PROCESSANDO SOLICITAÇÃO...",until:0};
     $("chatReply").value="";
@@ -408,14 +439,14 @@ console.info("[OPH] YUMIYA REMOTE FINAL-10 // KEYMASTER");
     },
     stopProcessing:async()=>{state.comms.processing={active:false,targetUid:"all",targetPlayerId:"",label:"PROCESSANDO SOLICITAÇÃO...",until:0};await save()}
   };
-  OPH.Realtime.onState(s=>{state=merge(s);render()});OPH.Realtime.onRequests(r=>{
+  OPH.Realtime.onState(s=>{state=merge(s);stateLoaded=true;render();syncIncomingTimeline()});OPH.Realtime.onRequests(r=>{
     if(OPH.Realtime.getMode()==="firebase")requests=r||{};
     else{
       const merged=Object.assign({},requests);
       for(const [uid,node] of Object.entries(r||{}))merged[uid]=Object.assign({},merged[uid]||{},node||{});
       requests=merged;
     }
-    renderRequests();renderChat();renderOperatorProfiles()
+    renderRequests();renderChat();renderOperatorProfiles();syncIncomingTimeline()
   });
   window.addEventListener("DOMContentLoaded",()=>{$("room").value=room;$("firebaseLogin").classList.toggle("hidden",!window.OPH_CONFIG?.firebase?.enabled);$("localLogin").classList.toggle("hidden",!!window.OPH_CONFIG?.firebase?.enabled);$("chatReply").addEventListener("keydown",e=>{if(e.key==="Enter"&&e.ctrlKey){e.preventDefault();sendComms()}});$("chatTarget")?.addEventListener("change",e=>{if(e.target.value!=="all"){selectedProfileUid=e.target.value;renderOperatorProfiles()}renderContactTools()});render()});
 })();

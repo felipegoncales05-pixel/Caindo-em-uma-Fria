@@ -1,7 +1,7 @@
 window.OPH = window.OPH || {};
-window.OPH_BUILD = "FINAL-09";
+window.OPH_BUILD = "FINAL-11";
 OPH.DEFAULT_STATE = {
-  version: 11,
+  version: 12,
   focusStage: 0,
   visible: {
     government: true,
@@ -32,10 +32,14 @@ OPH.DEFAULT_STATE = {
   },
   emergency: { level:0, active:false },
   comms: {
+    // `timeline` é a fonte canônica FINAL-11. `messages` permanece apenas para compatibilidade com builds antigas.
     messages: [],
+    timeline: [],
+    sequence: 0,
+    clearVersion: 0,
     clearedAt: 0,
     processing: { active:false, targetUid:"all", targetPlayerId:"", label:"PROCESSANDO SOLICITAÇÃO...", until:0 },
-    affect: { anger:12, tension:18, portrait:"normal" },
+    affect: { anger:12, tension:18, euphoria:10, portrait:"normal" },
     operatorProfiles: {}
   },
   event: null,

@@ -1,5 +1,5 @@
 window.OPH = window.OPH || {};
-console.info("[OPH] YUMIYA REMOTE FINAL-10 // PLAYER");
+console.info("[OPH] YUMIYA REMOTE FINAL-11 // PLAYER");
 (() => {
   let state = OPH.cloneDefault();
   let room = new URLSearchParams(location.search).get("room") || localStorage.getItem("oph-room") || window.OPH_CONFIG.defaultRoom || "FRIA-01";
@@ -97,7 +97,7 @@ console.info("[OPH] YUMIYA REMOTE FINAL-10 // PLAYER");
     toast("OPERADOR RENOMEADO // "+name.toUpperCase());
   }
   function changeYumiyaIdentity(){openYumiyaRename()}
-  const portraitMoodFiles={normal:"normal",fear:"medo",embarrassed:"envergonhada",anger:"raiva"};
+  const portraitMoodFiles={normal:"normal",fear:"medo",embarrassed:"envergonhada",anger:"raiva",happy:"feliz"};
   let loadedPortraitKey="";
   function operatorProfile(){
     const identity=getYumiyaIdentity();
@@ -106,12 +106,13 @@ console.info("[OPH] YUMIYA REMOTE FINAL-10 // PLAYER");
     return profile?.enabled?profile:null;
   }
   function effectiveAffect(){
-    const base=Object.assign({anger:12,tension:18,portrait:"normal"},state.comms?.affect||{});
+    const base=Object.assign({anger:12,tension:18,euphoria:10,portrait:"normal"},state.comms?.affect||{});
     const profile=operatorProfile();
     if(!profile)return Object.assign(base,{preset:"standard",tone:"professional",exclusive:false});
     return {
       anger:profile.anger ?? base.anger,
       tension:profile.tension ?? base.tension,
+      euphoria:profile.euphoria ?? base.euphoria,
       portrait:profile.portrait || base.portrait || "normal",
       preset:profile.preset || "standard",
       tone:profile.tone || "professional",
@@ -120,6 +121,7 @@ console.info("[OPH] YUMIYA REMOTE FINAL-10 // PLAYER");
   }
   function setupYumiyaPortrait(){renderYumiyaAffect()}
   function moodWord(v){return v<25?"BAIXA":v<55?"ELEVADA":v<80?"ALTA":"CRÍTICA"}
+  function euphoriaWord(v){return v<25?"CONTIDA":v<55?"PRESENTE":v<80?"ALTA":"EUFÓRICA"}
   function loadPortraitFor(key,preset="standard"){
     const portrait=$("yumiyaFocusPortrait");if(!portrait)return;
     key=portraitMoodFiles[key]?key:"normal";
@@ -138,7 +140,7 @@ console.info("[OPH] YUMIYA REMOTE FINAL-10 // PLAYER");
       const img=new Image();
       img.onload=()=>{portrait.style.setProperty("--yumiyaPortrait",`url('${src}')`);portrait.classList.add("hasPortrait")};
       img.onerror=tryNext;
-      img.src=src+"?v=FINAL09";
+      img.src=src+"?v=FINAL11";
     };
     tryNext();
   }
@@ -146,15 +148,19 @@ console.info("[OPH] YUMIYA REMOTE FINAL-10 // PLAYER");
     const a=effectiveAffect();
     const anger=Math.max(0,Math.min(100,Math.round(Number(a.anger)||0)));
     const tension=Math.max(0,Math.min(100,Math.round(Number(a.tension)||0)));
+    const euphoria=Math.max(0,Math.min(100,Math.round(Number(a.euphoria)||0)));
     if($("yumiyaAngerBar"))$("yumiyaAngerBar").style.width=anger+"%";
     if($("yumiyaTensionBar"))$("yumiyaTensionBar").style.width=tension+"%";
+    if($("yumiyaEuphoriaBar"))$("yumiyaEuphoriaBar").style.width=euphoria+"%";
     if($("yumiyaAngerWord"))$("yumiyaAngerWord").textContent=moodWord(anger);
     if($("yumiyaTensionWord"))$("yumiyaTensionWord").textContent=moodWord(tension);
+    if($("yumiyaEuphoriaWord"))$("yumiyaEuphoriaWord").textContent=euphoriaWord(euphoria);
     const portrait=$("yumiyaFocusPortrait");
     if(portrait){
       portrait.style.setProperty("--scanSpeed",(5.8-(tension/100)*3.3).toFixed(2)+"s");
       portrait.classList.toggle("affectAngerHigh",anger>=70);
       portrait.classList.toggle("affectTensionHigh",tension>=70);
+      portrait.classList.toggle("affectEuphoriaHigh",euphoria>=70);
     }
     loadPortraitFor(a.portrait||"normal",a.preset||"standard");
     const identity=getYumiyaIdentity();
@@ -173,7 +179,7 @@ console.info("[OPH] YUMIYA REMOTE FINAL-10 // PLAYER");
     backdrop?.classList.toggle("hidden",!focusMode || !chatOpen);
     document.body.classList.toggle("yumiyaFocusActive",focusMode && chatOpen);
     if(btn){btn.classList.toggle("active",focusMode);btn.querySelector("b").textContent=focusMode?"VOLTAR AO COMPACTO":"ABRIR FOCUS"}
-    if(mode)mode.textContent=focusMode?"MODO: FOCUS // FINAL-10":"MODO: COMPACTO // FINAL-10";
+    if(mode)mode.textContent=focusMode?"MODO: FOCUS // FINAL-11":"MODO: COMPACTO // FINAL-11";
   }
   function toggleYumiyaFocus(force){
     focusMode=typeof force==="boolean"?force:!focusMode;
@@ -204,6 +210,9 @@ console.info("[OPH] YUMIYA REMOTE FINAL-10 // PLAYER");
       emergency:Object.assign(d.emergency,s?.emergency||{}),
       comms:Object.assign(d.comms,s?.comms||{}, {
         messages:Array.isArray(s?.comms?.messages)?s.comms.messages:[],
+        timeline:Array.isArray(s?.comms?.timeline)?s.comms.timeline:[],
+        sequence:Number(s?.comms?.sequence)||0,
+        clearVersion:Number(s?.comms?.clearVersion)||0,
         processing:Object.assign(d.comms.processing,s?.comms?.processing||{}),
         affect:Object.assign(d.comms.affect,s?.comms?.affect||{}),
         operatorProfiles:Object.assign({},d.comms.operatorProfiles||{},s?.comms?.operatorProfiles||{})
@@ -289,7 +298,9 @@ console.info("[OPH] YUMIYA REMOTE FINAL-10 // PLAYER");
     arr[i]=Object.assign({},arr[i],patch||{});saveLocalOutgoing(arr);
   }
   function applyRemoteClearMarker(){
-    const marker=Number(state.comms?.clearedAt)||0;
+    const version=Number(state.comms?.clearVersion)||0;
+    const legacyMarker=Number(state.comms?.clearedAt)||0;
+    const marker=version>0?version:legacyMarker;
     if(!marker)return;
     const key=clearMarkerKey(),seen=Number(localStorage.getItem(key)||0);
     if(marker>seen){
@@ -303,25 +314,29 @@ console.info("[OPH] YUMIYA REMOTE FINAL-10 // PLAYER");
     const identity=getYumiyaIdentity();
     return !!((playerUid && m.targetUid===playerUid) || (identity?.playerId && m.targetPlayerId===identity.playerId));
   }
-  function timelineOrderValue(m){return Number(m.clientTs||m.ts)||0}
-  function buildYumiyaTimeline(local,remote){
-    const all=[
-      ...local.map(m=>Object.assign({source:"player"},m,{clientMessageId:m.clientMessageId||m.id})),
-      ...remote.map(m=>Object.assign({source:"yumiya"},m))
-    ].sort((a,b)=>timelineOrderValue(a)-timelineOrderValue(b));
-    const replies=all.filter(m=>m.source==="yumiya"&&m.replyToClientMessageId);
-    replies.forEach(reply=>{
-      let ri=all.indexOf(reply);
-      const li=all.findIndex(m=>m.source==="player"&&(m.clientMessageId||m.id)===reply.replyToClientMessageId);
-      if(li<0||ri<0)return;
-      all.splice(ri,1);
-      let anchor=all.findIndex(m=>m.source==="player"&&(m.clientMessageId||m.id)===reply.replyToClientMessageId);
-      if(anchor<0){all.push(reply);return}
-      let insert=anchor+1;
-      while(insert<all.length&&all[insert].source==="yumiya"&&all[insert].replyToClientMessageId===reply.replyToClientMessageId)insert++;
-      all.splice(insert,0,reply);
-    });
-    return all;
+  function canonicalTimelineForMe(){
+    const identity=getYumiyaIdentity(),pid=identity?.playerId||"";
+    const timeline=Array.isArray(state.comms?.timeline)?state.comms.timeline:[];
+    return timeline.filter(ev=>{
+      if(ev?.kind==="player")return !!pid && ev.playerId===pid;
+      if(ev?.kind==="yumiya")return ev.targetUid==="all" || !ev.targetUid || (playerUid&&ev.targetUid===playerUid) || (!!pid&&ev.targetPlayerId===pid);
+      return false;
+    }).slice().sort((a,b)=>(Number(a.seq)||0)-(Number(b.seq)||0));
+  }
+  function buildYumiyaTimeline(local){
+    const canonical=canonicalTimelineForMe();
+    if(canonical.length){
+      const confirmedIds=new Set(canonical.filter(e=>e.kind==="player").map(e=>e.clientMessageId||e.id).filter(Boolean));
+      const out=canonical.map(e=>e.kind==="player"
+        ?Object.assign({source:"player",status:"confirmed"},e)
+        :Object.assign({source:"yumiya"},e));
+      // Mantém apenas ecos locais que o Keymaster ainda não espelhou para a timeline canônica.
+      const pending=local.filter(m=>!confirmedIds.has(m.clientMessageId||m.id)).map(m=>Object.assign({source:"player"},m));
+      return [...out,...pending];
+    }
+    // Fallback para uma sala ainda não tocada pelo Keymaster FINAL-11.
+    const remote=(state.comms?.messages||[]).filter(isForMe).map(m=>Object.assign({source:"yumiya"},m));
+    return [...local.map(m=>Object.assign({source:"player"},m)),...remote].sort((a,b)=>(Number(a.clientTs||a.ts)||0)-(Number(b.clientTs||b.ts)||0));
   }
   function renderYumiya(){
     const enabled=!!state.visible.comms;
@@ -337,10 +352,8 @@ console.info("[OPH] YUMIYA REMOTE FINAL-10 // PLAYER");
     }
 
     applyRemoteClearMarker();
-    const clearedAt=Number(state.comms.clearedAt)||0;
-    const remote=(state.comms.messages||[]).filter(m=>(Number(m.ts)||0)>clearedAt).filter(isForMe);
     const local=getLocalOutgoing();
-    const conversation=buildYumiyaTimeline(local,remote);
+    const conversation=buildYumiyaTimeline(local);
     const merged=[
       {id:"system-welcome",source:"system",text:"Canal remoto inicializado. Você pode enviar uma solicitação operacional para a Yumiya quando necessário."},
       ...conversation
@@ -349,8 +362,8 @@ console.info("[OPH] YUMIYA REMOTE FINAL-10 // PLAYER");
     $("yumiyaMessages").innerHTML=merged.map(m=>{
       if(m.source==="system") return `<div class="chatSystemMsg">${esc(m.text)}</div>`;
       if(m.source==="player"){
-        const status=m.status==="failed"?"FALHA NO ENVIO":m.status==="sending"?"ENVIANDO...":"ENVIADA";
-        const statusClass=m.status==="failed"?" failed":m.status==="sending"?" sending":"";
+        const status=m.status==="failed"?"FALHA NO ENVIO":m.status==="sending"?"ENVIANDO...":m.status==="confirmed"?"RECEBIDA PELO KEYMASTER":"ENVIADA";
+        const statusClass=m.status==="failed"?" failed":m.status==="sending"?" sending":m.status==="confirmed"?" confirmed":"";
         return `<div class="chatMsg player${statusClass}"><div class="chatMeta">VOCÊ // ${new Date(m.clientTs||m.ts||Date.now()).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})} // ${status}</div><div class="chatBubble">${esc(m.text)}</div></div>`;
       }
       const style=["normal","urgent","glitch"].includes(m.style)?m.style:"normal";
@@ -365,9 +378,10 @@ console.info("[OPH] YUMIYA REMOTE FINAL-10 // PLAYER");
     $("yumiyaStatus").textContent=processing?"CONSULTANDO...":"CANAL SEGURO";
     $("yumiyaLaunchStatus").textContent=processing?"PROCESSANDO":"CANAL DISPONÍVEL";
 
-    const newest=remote.reduce((n,m)=>Math.max(n,+m.ts||0),0);
+    const remoteVisible=conversation.filter(m=>m.source==="yumiya");
+    const newest=remoteVisible.reduce((n,m)=>Math.max(n,+m.ts||+m.hostTs||0),0);
     if(newest>lastSeenCommsTs && !chatOpen){
-      unread += remote.filter(m=>(+m.ts||0)>lastSeenCommsTs).length;
+      unread += remoteVisible.filter(m=>(+m.ts||+m.hostTs||0)>lastSeenCommsTs).length;
       if(unread){$("yumiyaUnread").textContent=String(Math.min(unread,99));$("yumiyaUnread").classList.remove("hidden");beep(820,.05)}
     }
     lastSeenCommsTs=Math.max(lastSeenCommsTs,newest);
