@@ -151,8 +151,22 @@ OPH.Realtime = (() => {
     if(mode==="ws") return ws.send(JSON.stringify({type:"clear_chat",ownerUid,messageId}));
   }
 
+  async function clearAllChats(){
+    if(mode==="firebase"){
+      const base=db.ref(`rooms/${room}/requests`);
+      const snap=await base.once("value");
+      const val=snap.val()||{};
+      const updates={};
+      Object.keys(val).forEach(ownerUid=>{if(val[ownerUid]?.chat)updates[`${ownerUid}/chat`]=null});
+      if(Object.keys(updates).length)await base.update(updates);
+      return;
+    }
+    if(mode==="ws") return ws.send(JSON.stringify({type:"clear_all_chats"}));
+    bc?.postMessage({type:"clear_all_chats"});
+  }
+
   return {
-    connect,onState,onRequests,setState,patchState,sendRequest,sendChat,clearRequest,clearChat,
+    connect,onState,onRequests,setState,patchState,sendRequest,sendChat,clearRequest,clearChat,clearAllChats,
     getMode:()=>mode,getUid:()=>uid,getRoom:()=>room
   };
 })();

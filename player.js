@@ -2,7 +2,7 @@ window.OPH = window.OPH || {};
 (() => {
   let state = OPH.cloneDefault();
   let room = new URLSearchParams(location.search).get("room") || localStorage.getItem("oph-room") || window.OPH_CONFIG.defaultRoom || "FRIA-01";
-  let connected=false, currentStage=0, lastEventId=null, playerUid=null, chatOpen=false, unread=0, lastSeenCommsTs=0;
+  let connected=false, currentStage=0, lastEventId=null, playerUid=null, chatOpen=false, focusMode=false, unread=0, lastSeenCommsTs=0;
   const stageDefs=[
     ["home","ABERTURA"],["government","GOVERNO"],["h01","H-01"],["approaches","PLANO"],["preps","D-1"],["n02","N-02"],["protocol","PROTO"]
   ];
@@ -72,6 +72,71 @@ window.OPH = window.OPH || {};
     renderIdentityGate();
     if($("yumiyaIdentityInput")){$("yumiyaIdentityInput").value=current?.name||"";$("yumiyaIdentityInput").focus()}
   }
+  const portraitFiles={
+    normal:["yumiya-normal.png","yumiya-portrait.png"],
+    fear:["yumiya-medo.png"],
+    embarrassed:["yumiya-envergonhada.png"],
+    anger:["yumiya-raiva.png"]
+  };
+  let loadedPortraitKey="";
+  function setupYumiyaPortrait(){renderYumiyaAffect()}
+  function moodWord(v){return v<25?"BAIXA":v<55?"ELEVADA":v<80?"ALTA":"CRÍTICA"}
+  function loadPortraitFor(key){
+    const portrait=$("yumiyaFocusPortrait");if(!portrait)return;
+    key=portraitFiles[key]?key:"normal";
+    if(loadedPortraitKey===key)return;
+    loadedPortraitKey=key;
+    const candidates=[...(portraitFiles[key]||portraitFiles.normal)];
+    const tryNext=()=>{
+      const src=candidates.shift();
+      if(!src){portrait.classList.remove("hasPortrait");portrait.style.removeProperty("--yumiyaPortrait");return}
+      const img=new Image();
+      img.onload=()=>{portrait.style.setProperty("--yumiyaPortrait",`url('${src}')`);portrait.classList.add("hasPortrait")};
+      img.onerror=tryNext;
+      img.src=src;
+    };
+    tryNext();
+  }
+  function renderYumiyaAffect(){
+    const a=state.comms?.affect||{anger:12,tension:18,portrait:"normal"};
+    const anger=Math.max(0,Math.min(100,Math.round(Number(a.anger)||0)));
+    const tension=Math.max(0,Math.min(100,Math.round(Number(a.tension)||0)));
+    if($("yumiyaAngerBar"))$("yumiyaAngerBar").style.width=anger+"%";
+    if($("yumiyaTensionBar"))$("yumiyaTensionBar").style.width=tension+"%";
+    if($("yumiyaAngerWord"))$("yumiyaAngerWord").textContent=moodWord(anger);
+    if($("yumiyaTensionWord"))$("yumiyaTensionWord").textContent=moodWord(tension);
+    const portrait=$("yumiyaFocusPortrait");
+    if(portrait){
+      portrait.style.setProperty("--scanSpeed",(5.8-(tension/100)*3.3).toFixed(2)+"s");
+      portrait.classList.toggle("affectAngerHigh",anger>=70);
+      portrait.classList.toggle("affectTensionHigh",tension>=70);
+    }
+    loadPortraitFor(a.portrait||"normal");
+  }
+  function applyYumiyaFocus(){
+    const chat=$("yumiyaChat"), backdrop=$("yumiyaFocusBackdrop"), btn=$("yumiyaFocusBtn"), mode=$("yumiyaViewMode");
+    if(!chat)return;
+    chat.classList.toggle("focus",focusMode);
+    backdrop?.classList.toggle("hidden",!focusMode || !chatOpen);
+    document.body.classList.toggle("yumiyaFocusActive",focusMode && chatOpen);
+    if(btn){btn.classList.toggle("active",focusMode);btn.querySelector("b").textContent=focusMode?"COMPACT":"FOCUS"}
+    if(mode)mode.textContent=focusMode?"FOCUS MODE":"COMPACT MODE";
+  }
+  function toggleYumiyaFocus(force){
+    focusMode=typeof force==="boolean"?force:!focusMode;
+    if(focusMode && !chatOpen){chatOpen=true;$("yumiyaChat")?.classList.remove("hidden")}
+    applyYumiyaFocus();
+    if(focusMode){
+      ensureYumiyaIdentityFromMainName();
+      unread=0;$("yumiyaUnread")?.classList.add("hidden");
+      renderYumiya();
+    }
+    requestAnimationFrame(()=>{
+      const identity=getYumiyaIdentity();
+      if(identity){const m=$("yumiyaMessages");if(m)m.scrollTop=m.scrollHeight;$("yumiyaInput")?.focus()}
+      else $("yumiyaIdentityInput")?.focus();
+    });
+  }
   function mergeDefaults(s){
     const d=OPH.cloneDefault();
     return Object.assign(d,s||{},{
@@ -86,7 +151,8 @@ window.OPH = window.OPH || {};
       emergency:Object.assign(d.emergency,s?.emergency||{}),
       comms:Object.assign(d.comms,s?.comms||{}, {
         messages:Array.isArray(s?.comms?.messages)?s.comms.messages:[],
-        processing:Object.assign(d.comms.processing,s?.comms?.processing||{})
+        processing:Object.assign(d.comms.processing,s?.comms?.processing||{}),
+        affect:Object.assign(d.comms.affect,s?.comms?.affect||{})
       })
     });
   }
@@ -123,7 +189,7 @@ window.OPH = window.OPH || {};
     let mode=state.n02.imageMode==="auto"?(count===5?"full":count>0?"partial":"hidden"):state.n02.imageMode;
     specimen.className="specimen "+(mode==="full"?"full":mode==="partial"?"partial":"");
     $("fragments").innerHTML=OPH.N02_PUBLIC.map(c=>`<div class="fragment ${state.n02.clues[c.id]?'':'locked'}"><div class="tag">${c.code}</div><h4>${state.n02.clues[c.id]?c.title:"FRAGMENTO CRIPTOGRAFADO"}</h4><p>${state.n02.clues[c.id]?c.body:c.locked}</p></div>`).join("");
-    $("abilities").innerHTML=OPH.N02_ABILITIES.map(a=>{const on=state.n02.clues[a[0]];return `<div class="ability ${on?'':'off'}"><span class="s">${on?'CONFIRMADA':'NÃO CONFIRMADA'}</span><h4>${on?a[1]+" "+a[2]:"? CAPACIDADE DESCONHECIDA"}</h4><p>${on?a[3]:"Ainda não existem evidências suficientes."}</p></div>`}).join("");
+    $("abilitiesList").innerHTML=OPH.N02_ABILITIES.map(a=>{const on=state.n02.clues[a[0]];return `<div class="ability ${on?'':'off'}"><span class="s">${on?'CONFIRMADA':'NÃO CONFIRMADA'}</span><h4>${on?a[1]+" "+a[2]:"? CAPACIDADE DESCONHECIDA"}</h4><p>${on?a[3]:"Ainda não existem evidências suficientes."}</p></div>`}).join("");
     $("profile").innerHTML=count<5?`<div class="card"><div class="tag">PERFIL PARCIAL</div><h3>${count}/5 fragmentos</h3><p>Use as abas de Intel e Capacidades para ver somente o que já pode ser tratado como fato.</p></div>`:
     `<div class="card"><div class="tag">PERFIL CONSOLIDADO</div><h3>AGREGADO GENÉTICO DE CONTRAMEDIDA</h3><p>N-02 é uma criação deliberada da RAIN composta por múltiplos materiais biológicos. Aprende rotinas, caça em baixa circulação, usa teto/parede/dutos e pode fabricar vibrações capazes de enganar o sentido aracnídeo da Reina. Capturado vivo, vira a prova física mais forte contra a RAIN.</p><div class="sep"></div><p><b>Contramedidas prováveis:</b> luz forte, frio, saturação vibracional/sonora e contenção coordenada.</p></div>`;
     $("family").classList.toggle("hidden",!(state.visible.family||state.n02.family));
@@ -143,12 +209,17 @@ window.OPH = window.OPH || {};
     try{return JSON.parse(localStorage.getItem(localChatKey())||"[]").filter(x=>x&&x.text)}catch(e){return[]}
   }
   function saveLocalOutgoing(arr){localStorage.setItem(localChatKey(),JSON.stringify(arr.slice(-30)))}
-  function isForMe(m){return !m.targetUid || m.targetUid==="all" || (playerUid && m.targetUid===playerUid)}
+  function isForMe(m){
+    if(!m.targetUid || m.targetUid==="all")return true;
+    const identity=getYumiyaIdentity();
+    return !!((playerUid && m.targetUid===playerUid) || (identity?.playerId && m.targetPlayerId===identity.playerId));
+  }
   function renderYumiya(){
     const enabled=!!state.visible.comms;
     $("yumiyaLauncher").classList.toggle("hidden",!enabled);
-    if(!enabled){$("yumiyaChat").classList.add("hidden");chatOpen=false;return}
+    if(!enabled){$("yumiyaChat").classList.add("hidden");chatOpen=false;focusMode=false;applyYumiyaFocus();return}
 
+    renderYumiyaAffect();
     const identified=renderIdentityGate();
     if(!identified){
       $("yumiyaStatus").textContent="IDENTIFICAÇÃO NECESSÁRIA";
@@ -156,8 +227,12 @@ window.OPH = window.OPH || {};
       return;
     }
 
-    const remote=(state.comms.messages||[]).filter(isForMe);
-    const local=getLocalOutgoing().map(m=>Object.assign({source:"player"},m));
+    const clearedAt=Number(state.comms.clearedAt)||0;
+    const remote=(state.comms.messages||[]).filter(m=>(Number(m.ts)||0)>clearedAt).filter(isForMe);
+    const localRaw=getLocalOutgoing();
+    const localKept=localRaw.filter(m=>(Number(m.ts)||0)>clearedAt);
+    if(localKept.length!==localRaw.length)saveLocalOutgoing(localKept);
+    const local=localKept.map(m=>Object.assign({source:"player"},m));
     const merged=[
       {id:"system-welcome",source:"system",ts:0,text:"Canal remoto inicializado. Envie uma solicitação operacional quando necessário."},
       ...local,
@@ -192,6 +267,8 @@ window.OPH = window.OPH || {};
   function toggleYumiyaChat(force){
     chatOpen=typeof force==="boolean"?force:!chatOpen;
     $("yumiyaChat").classList.toggle("hidden",!chatOpen);
+    if(!chatOpen && focusMode)focusMode=false;
+    applyYumiyaFocus();
     if(chatOpen){
       ensureYumiyaIdentityFromMainName();
       unread=0;$("yumiyaUnread").classList.add("hidden");
@@ -246,12 +323,14 @@ window.OPH = window.OPH || {};
     catch(e){toast("FALHA AO CONECTAR");console.error(e)}
   }
   OPH.Realtime.onState(s=>{state=mergeDefaults(s);render()});
-  window.OPHPlayer={go,submitKey,switchTab,connect,toggleYumiyaChat,sendYumiyaMessage,confirmYumiyaIdentity,changeYumiyaIdentity};
+  window.OPHPlayer={go,submitKey,switchTab,connect,toggleYumiyaChat,toggleYumiyaFocus,sendYumiyaMessage,confirmYumiyaIdentity,changeYumiyaIdentity};
   window.addEventListener("DOMContentLoaded",()=>{
     $("room").value=room;$("name").value=localStorage.getItem("oph-name")||"";
     $("name").oninput=()=>localStorage.setItem("oph-name",$("name").value);
     $("yumiyaInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendYumiyaMessage()}});
     $("yumiyaIdentityInput").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();confirmYumiyaIdentity()}});
+    document.addEventListener("keydown",e=>{if(e.key==="Escape"&&focusMode){e.preventDefault();toggleYumiyaFocus(false)}});
+    setupYumiyaPortrait();applyYumiyaFocus();
     connect();render()
   });
 })();

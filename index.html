@@ -10,7 +10,7 @@
 <section class="view" data-stage="2"><div class="eyebrow">OBJETIVO PRIMÁRIO // H-01</div><h2 class="title">NÃO ACORDE<br>O RUSSO.</h2><div class="cols2"><div class="card"><div class="tag">SUBJECT H-01</div><h3>Extração criogênica</h3><p>A cápsula faz parte do objetivo. Se ele despertar, deixa de ser carga e vira evento de contenção.</p><div class="sep"></div><div class="chips"><span class="chip">Plano H</span><span class="chip">Kaboom</span><span class="chip">Capsula fechada</span></div></div><div class="emergencyBox hidden" id="emSim"><div class="tag">SIMULAR EMERGÊNCIA</div><h3 id="emTitle"></h3><div class="meter"><i id="emMeter"></i></div><p id="emText"></p><div class="sep"></div><div id="emStatus" class="tag"></div></div></div></section>
 <section class="view" data-stage="3"><div class="eyebrow">PLANEJAMENTO</div><h2 class="title">COMO<br>ENTRAMOS?</h2><div class="approaches" id="approachGrid"></div></section>
 <section class="view" data-stage="4"><div class="eyebrow">D-1 // PREPARAÇÃO</div><h2 class="title">ANTES DO GOLPE.</h2><div class="cols2"><div><div class="card"><div class="tag">ABORDAGEM</div><h3 id="prepTitle">TRAPAÇA</h3><p>O narrador atualiza este quadro em tempo real.</p></div><div class="preps" id="prepGrid" style="margin-top:10px"></div></div><div class="card"><div class="tag">CONCLUSÃO</div><h3 id="prepPct" style="font-size:64px">0%</h3><p>Preparações concluídas.</p></div></div></section>
-<section class="view" data-stage="5"><div class="eyebrow">RAIN // ARQUIVO BIOLÓGICO</div><h2 class="title">N-02</h2><div class="n02"><div class="specimen" id="specimen"><div class="specLabel">N-02 // BIOLOGICAL COUNTERMEASURE</div><img src="n02.png"><div class="mask"></div></div><div><div class="card"><div class="tag">DECODIFICAÇÃO</div><h3><span id="clueCount">0/5</span> fragmentos</h3><div class="progress"><i id="clueBar"></i></div><div class="decrypt"><input id="keyInput" placeholder="KEYMASTER DO FRAGMENTO"><button class="btn accent" onclick="OPHPlayer.submitKey()">DECODIFICAR</button></div></div><div class="tabs"><button class="tab active" data-tab="intel" onclick="OPHPlayer.switchTab('intel')">INTEL / PISTAS</button><button class="tab" data-tab="abilities" onclick="OPHPlayer.switchTab('abilities')">CAPACIDADES CONFIRMADAS</button><button class="tab" data-tab="profile" onclick="OPHPlayer.switchTab('profile')">PERFIL</button></div><div class="panel active" id="intel"><div id="fragments"></div></div><div class="panel" id="abilities"><div id="abilities"></div></div><div class="panel" id="profile"></div><div class="card hidden" id="family" style="margin-top:10px"><div class="tag">EQUIPE DESIGNADA</div><h3>REINA'S FAMILY</h3><p>Reina: leitura biológica. Kang: contenção. Nadeko: suporte médico. Grace: acesso e genética.</p></div></div></div></section>
+<section class="view" data-stage="5"><div class="eyebrow">RAIN // ARQUIVO BIOLÓGICO</div><h2 class="title">N-02</h2><div class="n02"><div class="specimen" id="specimen"><div class="specLabel">N-02 // BIOLOGICAL COUNTERMEASURE</div><img src="n02.png"><div class="mask"></div></div><div><div class="card"><div class="tag">DECODIFICAÇÃO</div><h3><span id="clueCount">0/5</span> fragmentos</h3><div class="progress"><i id="clueBar"></i></div><div class="decrypt"><input id="keyInput" placeholder="KEYMASTER DO FRAGMENTO"><button class="btn accent" onclick="OPHPlayer.submitKey()">DECODIFICAR</button></div></div><div class="tabs"><button class="tab active" data-tab="intel" onclick="OPHPlayer.switchTab('intel')">INTEL / PISTAS</button><button class="tab" data-tab="abilities" onclick="OPHPlayer.switchTab('abilities')">CAPACIDADES CONFIRMADAS</button><button class="tab" data-tab="profile" onclick="OPHPlayer.switchTab('profile')">PERFIL</button></div><div class="panel active" id="intel"><div id="fragments"></div></div><div class="panel" id="abilities"><div id="abilitiesList"></div></div><div class="panel" id="profile"></div><div class="card hidden" id="family" style="margin-top:10px"><div class="tag">EQUIPE DESIGNADA</div><h3>REINA'S FAMILY</h3><p>Reina: leitura biológica. Kang: contenção. Nadeko: suporte médico. Grace: acesso e genética.</p></div></div></div></section>
 <section class="view" data-stage="6"><div class="eyebrow">PROTOCOLO</div><h2 class="title">SE H-01 ACORDAR,<br>O GOLPE ACABOU.</h2><div class="card"><h3>Prioridade muda.</h3><p>Interromper escalada, evacuar civis, abrir distância, tentar comunicação/recontenção e assumir que usuários afetados podem ficar temporariamente sem energia.</p></div></section>
 </main></div>
 
@@ -21,7 +21,25 @@
     <i id="yumiyaUnread" class="hidden">0</i>
   </button>
 </div>
+<div class="yumiyaFocusBackdrop hidden" id="yumiyaFocusBackdrop" onclick="OPHPlayer.toggleYumiyaFocus(false)" aria-hidden="true"></div>
 <section class="yumiyaChat hidden" id="yumiyaChat" aria-label="Yumiya Remote Assist">
+  <aside class="yumiyaFocusPortrait" id="yumiyaFocusPortrait" aria-label="Portrait de Yumiya">
+    <div class="yumiyaPortraitScan"></div>
+    <div class="yumiyaPortraitFallback" id="yumiyaPortraitFallback">
+      <span>YK</span>
+      <b>PORTRAIT // SLOT</b>
+      <small>adicione os 4 portraits da Yumiya</small>
+    </div>
+    <div class="yumiyaPortraitData">
+      <small>DCX // REMOTE OPERATOR</small>
+      <b>YUMIYA KIRYUIN</b>
+      <div class="yumiyaAffect" aria-label="Telemetria emocional">
+        <div class="affectRow"><label>RAIVA</label><div class="affectTrack anger"><i id="yumiyaAngerBar"></i></div><em id="yumiyaAngerWord">BAIXA</em></div>
+        <div class="affectRow"><label>TENSÃO</label><div class="affectTrack tension"><i id="yumiyaTensionBar"></i></div><em id="yumiyaTensionWord">BAIXA</em></div>
+      </div>
+      <span><i class="miniDot"></i> LINK CRIPTOGRAFADO</span>
+    </div>
+  </aside>
   <header class="yumiyaChatHead">
     <div class="yumiyaAvatar"><span>YK</span></div>
     <div class="yumiyaIdentity">
@@ -29,9 +47,10 @@
       <b>YUMIYA KIRYUIN</b>
       <em><span class="miniDot"></span><span id="yumiyaStatus">CANAL SEGURO</span></em>
     </div>
+    <button class="chatFocusBtn" id="yumiyaFocusBtn" onclick="OPHPlayer.toggleYumiyaFocus()" title="Alternar Focus Mode"><span>⌗</span><b>FOCUS</b></button>
     <button class="chatIconBtn" onclick="OPHPlayer.toggleYumiyaChat(false)" title="Fechar">×</button>
   </header>
-  <div class="yumiyaSystemLine">KIRYUIN RESPONSE INTERFACE // CONSULTAS OPERACIONAIS</div>
+  <div class="yumiyaSystemLine"><span>KIRYUIN RESPONSE INTERFACE // CONSULTAS OPERACIONAIS</span><b id="yumiyaViewMode">COMPACT MODE</b></div>
   <div class="yumiyaIdentityGate hidden" id="yumiyaIdentityGate">
     <div class="tag">DCX // IDENTIFICAÇÃO DE OPERADOR</div>
     <h3>IDENTIFIQUE-SE PARA ACESSAR O CANAL</h3>

@@ -1,9 +1,36 @@
 window.OPH = window.OPH || {};
 (() => {
-  let state=OPH.cloneDefault(),room=new URLSearchParams(location.search).get("room")||window.OPH_CONFIG.defaultRoom||"FRIA-01",requests={};
+  let state=OPH.cloneDefault(),room=new URLSearchParams(location.search).get("room")||window.OPH_CONFIG.defaultRoom||"FRIA-01",requests={},selectedChat=null;
   const $=id=>document.getElementById(id);
   function toast(t){const e=$("toast");e.textContent=t;e.classList.add("show");setTimeout(()=>e.classList.remove("show"),1600)}
   function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+  function archiveKey(){return "oph-km-yumiya-archive-"+room}
+  function contactsKey(){return "oph-km-yumiya-contacts-"+room}
+  function getArchive(){try{return JSON.parse(localStorage.getItem(archiveKey())||"[]").filter(Boolean)}catch(e){return[]}}
+  function saveArchive(items){localStorage.setItem(archiveKey(),JSON.stringify(items.slice(-500)))}
+  function getContacts(){try{return JSON.parse(localStorage.getItem(contactsKey())||"{}")||{}}catch(e){return{}}}
+  function saveContacts(obj){localStorage.setItem(contactsKey(),JSON.stringify(obj))}
+  function rememberContacts(inbox){
+    const contacts=getContacts();let changed=false;
+    inbox.forEach(({uid,msg})=>{
+      const prev=contacts[uid]||{};
+      const next={uid,name:msg.nickname||prev.name||uid.slice(0,8),playerId:msg.playerId||prev.playerId||"",lastSeen:Math.max(+prev.lastSeen||0,+msg.ts||Date.now())};
+      if(JSON.stringify(prev)!==JSON.stringify(next)){contacts[uid]=next;changed=true}
+    });
+    if(changed)saveContacts(contacts);
+    return contacts;
+  }
+  function addArchive(item){
+    const items=getArchive();
+    items.push(Object.assign({archiveId:crypto.randomUUID?.()||"arc-"+Date.now()+Math.random(),archivedAt:Date.now()},item));
+    saveArchive(items);renderArchive();
+  }
+  function removeLocalRequestChat(uid,id){
+    if(!requests?.[uid]?.chat)return;
+    const next=Object.assign({},requests);next[uid]=Object.assign({},next[uid]);next[uid].chat=Object.assign({},next[uid].chat);delete next[uid].chat[id];
+    if(!Object.keys(next[uid].chat).length)delete next[uid].chat;
+    requests=next;
+  }
   function merge(s){
     const d=OPH.cloneDefault();
     return Object.assign(d,s||{}, {
@@ -18,7 +45,8 @@ window.OPH = window.OPH || {};
       emergency:Object.assign(d.emergency,s?.emergency||{}),
       comms:Object.assign(d.comms,s?.comms||{}, {
         messages:Array.isArray(s?.comms?.messages)?s.comms.messages:[],
-        processing:Object.assign(d.comms.processing,s?.comms?.processing||{})
+        processing:Object.assign(d.comms.processing,s?.comms?.processing||{}),
+        affect:Object.assign(d.comms.affect,s?.comms?.affect||{})
       })
     })
   }
@@ -60,27 +88,70 @@ window.OPH = window.OPH || {};
   }
   function renderChat(){
     const inbox=chatRequests();
+    const contacts=rememberContacts(inbox);
     $("chatInboxCount").textContent=`${inbox.length} PENDENTE${inbox.length===1?"":"S"}`;
     $("chatInbox").innerHTML=inbox.length?inbox.map(({uid,id,msg})=>`
-      <div class="chatInboxRow">
+      <div class="chatInboxRow ${selectedChat?.uid===uid&&selectedChat?.id===id?'selected':''}">
         <div class="chatInboxTop"><b>${esc(msg.nickname||"Jogador")}</b><small>${msg.ts?new Date(msg.ts).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}):""}${msg.playerId?` · ${esc(msg.playerId)}`:""}</small></div>
         <p>${esc(msg.text)}</p>
-        <div class="actions"><button class="btn gold" onclick="KM.selectChat('${uid}','${id}')">RESPONDER</button><button class="btn" onclick="KM.dismissChat('${uid}','${id}')">ARQUIVAR</button></div>
+        <div class="actions"><button class="btn gold" onclick="KM.selectChat('${uid}','${id}')">RESPONDER</button><button class="btn" onclick="KM.archiveIncoming('${uid}','${id}')">ARQUIVAR</button><button class="btn" onclick="KM.dismissChat('${uid}','${id}')">DESCARTAR</button></div>
       </div>`).join(""):`<div class="card"><p>Nenhuma mensagem aguardando resposta.</p></div>`;
 
-    const senders=new Map();
-    inbox.forEach(({uid,msg})=>senders.set(uid,{name:msg.nickname||uid.slice(0,8),playerId:msg.playerId||""}));
     const current=$("chatTarget").value||"all";
-    $("chatTarget").innerHTML=`<option value="all">TODOS // GLOBAL</option>`+[...senders].map(([uid,who])=>`<option value="${esc(uid)}">${esc(who.name)}${who.playerId?` // ${esc(who.playerId)}`:""} // DIRETO</option>`).join("");
+    const sortedContacts=Object.values(contacts).sort((a,b)=>(+b.lastSeen||0)-(+a.lastSeen||0));
+    $("chatTarget").innerHTML=`<option value="all">TODOS // GLOBAL</option>`+sortedContacts.map(who=>`<option value="${esc(who.uid)}">${esc(who.name)}${who.playerId?` // ${esc(who.playerId)}`:""} // DIRETO</option>`).join("");
     if([...$("chatTarget").options].some(o=>o.value===current))$("chatTarget").value=current;
+    else if(selectedChat?.uid && [...$("chatTarget").options].some(o=>o.value===selectedChat.uid))$("chatTarget").value=selectedChat.uid;
 
-    const hist=(state.comms.messages||[]).slice(-20).reverse();
-    $("chatHistory").innerHTML=hist.length?hist.map(m=>`<div class="chatHistoryRow ${esc(m.style||"normal")}"><div><b>${m.targetUid==="all"||!m.targetUid?"GLOBAL":"DIRETO"}</b><small>${m.ts?new Date(m.ts).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}):""}</small></div><p>${esc(m.text)}</p></div>`).join(""):`<div class="card"><p>Nenhuma transmissão enviada.</p></div>`;
+    const hist=(state.comms.messages||[]).slice(-50).reverse();
+    $("chatHistory").innerHTML=hist.length?hist.map(m=>{
+      const contact=contacts[m.targetUid]||{};
+      const target=m.targetUid==="all"||!m.targetUid?"GLOBAL":`DIRETO // ${m.targetName||contact.name||m.targetPlayerId||"OPERADOR"}`;
+      return `<div class="chatHistoryRow ${esc(m.style||"normal")}"><div><b>${esc(target)}</b><small>${m.ts?new Date(m.ts).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}):""}</small></div><p>${esc(m.text)}</p><div class="chatHistoryActions"><button class="btn" onclick="KM.archiveOutgoing('${esc(m.id)}')">ARQUIVAR</button></div></div>`
+    }).join(""):`<div class="card"><p>Nenhuma transmissão enviada.</p></div>`;
+    renderArchive();
+  }
+  function renderArchive(){
+    if(!$("chatArchive"))return;
+    const items=getArchive().sort((a,b)=>(+b.archivedAt||0)-(+a.archivedAt||0));
+    if($("chatArchiveCount"))$("chatArchiveCount").textContent=`${items.length} ITEM${items.length===1?"":"S"}`;
+    $("chatArchive").innerHTML=items.length?items.map(a=>{
+      const dir=a.direction==="incoming"?"JOGADOR → YUMIYA":"YUMIYA → "+(a.targetName||a.nickname||a.targetPlayerId||"GLOBAL");
+      const who=a.direction==="incoming"?(a.nickname||a.playerId||"Jogador"):(a.targetUid==="all"?"GLOBAL":(a.targetName||a.targetPlayerId||"OPERADOR"));
+      return `<div class="kmArchiveRow"><div class="kmArchiveMeta"><b>${esc(dir)}</b><small>${a.ts?new Date(a.ts).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):""} · ${esc(who)}</small></div><p>${esc(a.text)}</p><button class="btn" onclick="KM.deleteArchive('${esc(a.archiveId)}')">REMOVER DO ARQUIVO</button></div>`
+    }).join(""):`<div class="card"><p>Nada arquivado. O arquivo é local deste navegador do Keymaster e não é enviado aos jogadores.</p></div>`;
+  }
+  function clampMood(v){return Math.max(0,Math.min(100,Math.round(Number(v)||0)))}
+  function renderAffect(){
+    const a=state.comms.affect||{anger:12,tension:18,portrait:"normal"};
+    const anger=clampMood(a.anger),tension=clampMood(a.tension),portrait=["normal","fear","embarrassed","anger"].includes(a.portrait)?a.portrait:"normal";
+    if($("yumiyaAngerCtl"))$("yumiyaAngerCtl").value=anger;
+    if($("yumiyaTensionCtl"))$("yumiyaTensionCtl").value=tension;
+    if($("yumiyaAngerValue"))$("yumiyaAngerValue").textContent=anger+"%";
+    if($("yumiyaTensionValue"))$("yumiyaTensionValue").textContent=tension+"%";
+    document.querySelectorAll("#yumiyaPortraitCtl [data-portrait]").forEach(b=>b.classList.toggle("gold",b.dataset.portrait===portrait));
+  }
+  function previewMood(kind,value){
+    const v=clampMood(value),out=$(kind==="anger"?"yumiyaAngerValue":"yumiyaTensionValue");
+    if(out)out.textContent=v+"%";
+  }
+  async function setMood(kind,value){
+    if(!["anger","tension"].includes(kind))return;
+    state.comms.affect=Object.assign({anger:12,tension:18,portrait:"normal"},state.comms.affect||{});
+    state.comms.affect[kind]=clampMood(value);
+    await save();
+  }
+  async function setPortrait(portrait){
+    if(!["normal","fear","embarrassed","anger"].includes(portrait))return;
+    state.comms.affect=Object.assign({anger:12,tension:18,portrait:"normal"},state.comms.affect||{});
+    state.comms.affect.portrait=portrait;
+    await save();
+    toast("PORTRAIT // "+portrait.toUpperCase());
   }
   function renderEvents(){
     $("emLevel").value=state.emergency.level||0;$("emLevelLabel").textContent=OPH.EMERGENCY_STATES[state.emergency.level||0].title;
   }
-  function render(){renderVisibility();renderApproaches();renderPreps();renderClues();renderRequests();renderChat();renderEvents();$("roomLabel").textContent=room;$("playerUrl").value=location.origin+location.pathname.replace(/keymaster\.html$/,"")+`?room=${encodeURIComponent(room)}`}
+  function render(){renderVisibility();renderApproaches();renderPreps();renderClues();renderRequests();renderChat();renderAffect();renderEvents();$("roomLabel").textContent=room;$("playerUrl").value=location.origin+location.pathname.replace(/keymaster\.html$/,"")+`?room=${encodeURIComponent(room)}`}
   async function connect(){
     room=$("room").value.trim().toUpperCase()||"FRIA-01";history.replaceState(null,"",`?room=${encodeURIComponent(room)}`);
     const fb=window.OPH_CONFIG?.firebase?.enabled;
@@ -90,23 +161,77 @@ window.OPH = window.OPH || {};
   }
   function event(type,title,body){state.event={id:crypto.randomUUID?.()||String(Date.now())+Math.random(),type,title,body,duration:5200};save()}
   async function selectChat(uid,id){
-    $("chatTarget").value=uid;
     const item=chatRequests().find(x=>x.uid===uid&&x.id===id);
-    if(item)$("chatReply").placeholder=`Responder a ${item.msg.nickname||"jogador"}...`;
+    selectedChat=item?{uid,id}:null;
+    if(item){
+      const contacts=rememberContacts([item]);
+      renderChat();
+      $("chatTarget").value=uid;
+      $("chatReply").placeholder=`Responder a ${item.msg.nickname||"jogador"}...`;
+    }
     state.comms.processing={active:true,targetUid:uid,label:"PROCESSANDO SOLICITAÇÃO...",until:Date.now()+90000};
     await save();
     $("chatReply").focus();
+  }
+  async function archiveIncoming(uid,id){
+    const item=chatRequests().find(x=>x.uid===uid&&x.id===id);if(!item)return;
+    addArchive({direction:"incoming",uid,nickname:item.msg.nickname||"Jogador",playerId:item.msg.playerId||"",text:item.msg.text,ts:item.msg.ts||Date.now()});
+    await OPH.Realtime.clearChat(uid,id);removeLocalRequestChat(uid,id);
+    if(selectedChat?.uid===uid&&selectedChat?.id===id)selectedChat=null;
+    renderChat();toast("MENSAGEM ARQUIVADA // PRIVADO");
+  }
+  async function dismissChat(uid,id){
+    await OPH.Realtime.clearChat(uid,id);removeLocalRequestChat(uid,id);
+    if(selectedChat?.uid===uid&&selectedChat?.id===id)selectedChat=null;
+    renderChat();toast("MENSAGEM DESCARTADA");
+  }
+  function archiveOutgoing(id){
+    const m=(state.comms.messages||[]).find(x=>String(x.id)===String(id));if(!m)return;
+    addArchive({direction:"outgoing",targetUid:m.targetUid||"all",targetPlayerId:m.targetPlayerId||"",targetName:m.targetName||"",text:m.text,style:m.style||"normal",ts:m.ts||Date.now()});
+    toast("TRANSMISSÃO ARQUIVADA // PRIVADO");
+  }
+  function deleteArchive(id){
+    saveArchive(getArchive().filter(x=>String(x.archiveId)!==String(id)));renderArchive();toast("ITEM REMOVIDO DO ARQUIVO");
+  }
+  function exportArchive(){
+    const data={room,exportedAt:new Date().toISOString(),items:getArchive()};
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`yumiya-archive-${room}-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    toast("ARQUIVO EXPORTADO");
+  }
+  function clearArchive(){
+    if(!confirm("Apagar também o ARQUIVO PRIVADO deste navegador? Essa ação não pode ser desfeita."))return;
+    saveArchive([]);renderArchive();toast("ARQUIVO PRIVADO LIMPO");
+  }
+  async function clearAllChat(){
+    if(!confirm("LIMPAR A PORRA TODA?\n\nIsso apaga o chat ativo da Yumiya, as entradas pendentes dos jogadores e faz os clientes esconderem/apagarem o histórico local anterior. O ARQUIVO PRIVADO será preservado."))return;
+    const clearedAt=Date.now();
+    state.comms.messages=[];state.comms.clearedAt=clearedAt;state.comms.processing={active:false,targetUid:"all",label:"PROCESSANDO SOLICITAÇÃO...",until:0};
+    selectedChat=null;
+    const pendingBeforeClear=chatRequests();
+    await save();
+    try{
+      if(OPH.Realtime.getMode()==="ws")await Promise.all(pendingBeforeClear.map(x=>OPH.Realtime.clearChat(x.uid,x.id)));
+      else await OPH.Realtime.clearAllChats();
+    }catch(e){console.error(e)}
+    const next={};for(const [uid,node] of Object.entries(requests||{})){const copy=Object.assign({},node);delete copy.chat;if(Object.keys(copy).length)next[uid]=copy}requests=next;
+    renderChat();toast("CHAT ATIVO LIMPO");
   }
   async function sendComms(){
     const text=$("chatReply").value.trim();if(!text){toast("ESCREVA UMA MENSAGEM");return}
     const targetUid=$("chatTarget").value||"all";
     const style=$("chatStyle").value||"normal";
-    const msg={id:crypto.randomUUID?.()||String(Date.now())+Math.random(),sender:"YUMIYA KIRYUIN",text,style,targetUid,ts:Date.now()};
-    state.comms.messages=[...(state.comms.messages||[]),msg].slice(-50);
+    const contact=getContacts()[targetUid]||{};
+    const msg={id:crypto.randomUUID?.()||String(Date.now())+Math.random(),sender:"YUMIYA KIRYUIN",text,style,targetUid,targetPlayerId:targetUid==="all"?"":(contact.playerId||""),targetName:targetUid==="all"?"GLOBAL":(contact.name||"OPERADOR"),ts:Date.now()};
+    state.comms.messages=[...(state.comms.messages||[]),msg].slice(-80);
     state.comms.processing={active:false,targetUid:"all",label:"PROCESSANDO SOLICITAÇÃO...",until:0};
     $("chatReply").value="";
     await save();
-    toast(targetUid==="all"?"TRANSMISSÃO GLOBAL ENVIADA":"RESPOSTA ENVIADA");
+    if(selectedChat && targetUid===selectedChat.uid){
+      try{await OPH.Realtime.clearChat(selectedChat.uid,selectedChat.id)}catch(e){console.error(e)}
+      removeLocalRequestChat(selectedChat.uid,selectedChat.id);selectedChat=null;renderChat();
+    }
+    toast(targetUid==="all"?"TRANSMISSÃO GLOBAL ENVIADA":"RESPOSTA DIRETA ENVIADA");
   }
   window.KM={
     connect,
@@ -125,8 +250,17 @@ window.OPH = window.OPH || {};
     dismissRequest:id=>OPH.Realtime.clearRequest(id),
     copyLink:()=>navigator.clipboard?.writeText($("playerUrl").value),
     selectChat,
-    dismissChat:async(uid,id)=>{await OPH.Realtime.clearChat(uid,id);toast("MENSAGEM ARQUIVADA")},
+    archiveIncoming,
+    dismissChat,
+    archiveOutgoing,
+    deleteArchive,
+    exportArchive,
+    clearArchive,
+    clearAllChat,
     sendComms,
+    previewMood,
+    setMood,
+    setPortrait,
     processing:async()=>{
       state.comms.processing={active:true,targetUid:$("chatTarget").value||"all",label:"PROCESSANDO SOLICITAÇÃO...",until:Date.now()+90000};
       await save()

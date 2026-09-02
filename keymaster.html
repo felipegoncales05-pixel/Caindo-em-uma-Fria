@@ -7,7 +7,29 @@
 <section class="adminPanel commsAdmin">
   <div class="commsAdminHead">
     <div><div class="tag">YUMIYA // REMOTE ASSIST</div><h2>CAIXA DE COMUNICAÇÃO</h2></div>
-    <span class="btn" id="chatInboxCount">0 PENDENTES</span>
+    <div class="actions"><span class="btn" id="chatInboxCount">0 PENDENTES</span><button class="btn red kmNukeBtn" onclick="KM.clearAllChat()">LIMPAR A PORRA TODA</button></div>
+  </div>
+  <div class="kmAffectPanel">
+    <div class="kmAffectHead"><div><span class="kmFieldLabel">TELEMETRIA EMOCIONAL</span><b>ESTADO DA YUMIYA</b></div><small>Sincronizado com os jogadores</small></div>
+    <div class="kmAffectGrid">
+      <div class="kmMoodControl">
+        <label for="yumiyaAngerCtl">RAIVA <b id="yumiyaAngerValue">12%</b></label>
+        <input type="range" id="yumiyaAngerCtl" min="0" max="100" value="12" oninput="KM.previewMood('anger',this.value)" onchange="KM.setMood('anger',this.value)">
+      </div>
+      <div class="kmMoodControl">
+        <label for="yumiyaTensionCtl">TENSÃO <b id="yumiyaTensionValue">18%</b></label>
+        <input type="range" id="yumiyaTensionCtl" min="0" max="100" value="18" oninput="KM.previewMood('tension',this.value)" onchange="KM.setMood('tension',this.value)">
+      </div>
+      <div class="kmPortraitControl">
+        <label>PORTRAIT ATIVO</label>
+        <div class="kmPortraitButtons" id="yumiyaPortraitCtl">
+          <button class="btn" data-portrait="normal" onclick="KM.setPortrait('normal')">NORMAL</button>
+          <button class="btn" data-portrait="fear" onclick="KM.setPortrait('fear')">MEDO</button>
+          <button class="btn" data-portrait="embarrassed" onclick="KM.setPortrait('embarrassed')">ENVERGONHADA</button>
+          <button class="btn" data-portrait="anger" onclick="KM.setPortrait('anger')">RAIVA</button>
+        </div>
+      </div>
+    </div>
   </div>
   <div class="commsAdminGrid">
     <div>
@@ -34,7 +56,13 @@
     </div>
   </div>
   <div class="sep"></div>
-  <h3>HISTÓRICO DA YUMIYA</h3>
+  <div class="kmHistoryHead"><div><h3>HISTÓRICO DA YUMIYA</h3><small>Transmissões ativas da sala. Arquive individualmente o que quiser preservar.</small></div></div>
   <div id="chatHistory" class="chatHistory"></div>
+  <div class="sep"></div>
+  <div class="kmArchiveHead">
+    <div><div class="tag">KEYMASTER // LOCAL PRIVATE</div><h3>ARQUIVO PRIVADO <span id="chatArchiveCount">0 ITENS</span></h3><small>Fica salvo somente neste navegador do Keymaster. Limpar o chat ativo não apaga este arquivo.</small></div>
+    <div class="actions"><button class="btn" onclick="KM.exportArchive()">EXPORTAR .JSON</button><button class="btn red" onclick="KM.clearArchive()">LIMPAR ARQUIVO</button></div>
+  </div>
+  <div id="chatArchive" class="kmArchive"></div>
 </section>
 <section class="adminPanel" style="margin-top:12px"><h2>ABORDAGENS</h2><div class="adminList" id="approachCtl"></div></section><section class="adminPanel" style="margin-top:12px"><h2 id="prepCtlTitle">Preparações</h2><div id="prepCtl"></div></section><section class="adminPanel" style="margin-top:12px"><h2>N-02 // KEYMASTERS</h2><div class="actions"><button class="btn" onclick="KM.imageMode('hidden')">Imagem oculta</button><button class="btn" onclick="KM.imageMode('partial')">Parcial</button><button class="btn" onclick="KM.imageMode('full')">Completa</button><button class="btn" onclick="KM.imageMode('auto')">Auto</button></div><div class="adminList" id="clueCtl" style="margin-top:10px"></div></section><section class="adminPanel" style="margin-top:12px"><h2>CHAVES ENVIADAS PELOS JOGADORES</h2><div id="requests"></div></section><section class="adminPanel" style="margin-top:12px"><h2>H-01 // SIMULAÇÃO GLOBAL</h2><input type="range" id="emLevel" min="0" max="3" value="0" onchange="KM.emergency(this.value)"><p id="emLevelLabel" style="color:#9fb1c1"></p></section></main></div></div><div class="toast" id="toast"></div><script src="keymaster.js"></script></body></html>
