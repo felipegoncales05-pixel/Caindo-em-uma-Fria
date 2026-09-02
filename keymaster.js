@@ -1,7 +1,7 @@
 window.OPH = window.OPH || {};
-console.info("[OPH] YUMIYA REMOTE FINAL-11 // KEYMASTER");
+console.info("[DCX OS] A1 // KEYMASTER // YUMIYA CORE FINAL-11");
 (() => {
-  let state=OPH.cloneDefault(),stateLoaded=false,timelineSyncing=false,suppressTimelineSync=false,room=new URLSearchParams(location.search).get("room")||window.OPH_CONFIG.defaultRoom||"FRIA-01",requests={},selectedChat=null,selectedProfileUid="";
+  let state=OPH.cloneDefault(),stateLoaded=false,timelineSyncing=false,suppressTimelineSync=false,renderDeferred=false,room=new URLSearchParams(location.search).get("room")||window.OPH_CONFIG.defaultRoom||"FRIA-01",requests={},selectedChat=null,selectedProfileUid="";
   const $=id=>document.getElementById(id);
   function toast(t){const e=$("toast");e.textContent=t;e.classList.add("show");setTimeout(()=>e.classList.remove("show"),1600)}
   function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
@@ -124,9 +124,21 @@ console.info("[OPH] YUMIYA REMOTE FINAL-11 // KEYMASTER");
     timelineSyncing=true;
     try{await OPH.Realtime.setState(state)}catch(e){console.error("Falha ao sincronizar timeline canônica",e)}finally{timelineSyncing=false}
   }
-  async function save(){await OPH.Realtime.setState(state);render()}
+  function yumiyaControlBusy(){
+    const a=document.activeElement;
+    return !!(a && a.closest?.('[data-km-view="yumiya"]') && ["INPUT","SELECT","TEXTAREA"].includes(a.tagName));
+  }
+  function safeRender(){
+    if(yumiyaControlBusy()){renderDeferred=true;return}
+    renderDeferred=false;render();
+  }
+  function safeYumiyaRender(){
+    if(yumiyaControlBusy()){renderDeferred=true;return}
+    renderDeferred=false;renderRequests();renderChat();renderOperatorProfiles();
+  }
+  async function save(){await OPH.Realtime.setState(state);safeRender()}
   function renderVisibility(){
-    const defs=[["government","Contexto político"],["h01","H-01"],["approaches","Abordagens"],["preps","Preparações"],["n02","N-02"],["protocol","Protocolo"],["emergencySim","Simulador H-01"],["family","Reina's Family"],["comms","Yumiya // Remote"]];
+    const defs=[["government","Contexto político"],["h01","H-01"],["approaches","Abordagens"],["preps","Preparações"],["n02","N-02"],["protocol","Protocolo"],["emergencySim","Simulador H-01"],["comms","Yumiya // Remote"]];
     $("visibility").innerHTML=defs.map(d=>`<label class="toggle"><span>${d[1]}</span><input type="checkbox" ${state.visible[d[0]]?'checked':''} onchange="KM.toggleVisible('${d[0]}',this.checked)"></label>`).join("");
   }
   function renderApproaches(){
@@ -301,7 +313,7 @@ console.info("[OPH] YUMIYA REMOTE FINAL-11 // KEYMASTER");
     room=$("room").value.trim().toUpperCase()||"FRIA-01";history.replaceState(null,"",`?room=${encodeURIComponent(room)}`);
     const fb=window.OPH_CONFIG?.firebase?.enabled;
     const credentials=fb?{email:$("email").value,password:$("password").value}:{password:$("localPassword").value};
-    try{const r=await OPH.Realtime.connect({roomId:room,asHost:true,credentials});$("login").classList.add("hidden");$("console").classList.remove("hidden");$("mode").textContent=r.mode.toUpperCase();toast("KEYMASTER CONECTADO")}
+    try{const r=await OPH.Realtime.connect({roomId:room,asHost:true,credentials});$("login").classList.add("hidden");$("console").classList.remove("hidden");$("mode").textContent=r.mode.toUpperCase();setTimeout(()=>window.DCX?.Admin?.init?.(true),60);toast("KEYMASTER CONECTADO")}
     catch(e){toast("FALHA DE AUTENTICAÇÃO/CONEXÃO");console.error(e)}
   }
   function event(type,title,body){state.event={id:crypto.randomUUID?.()||String(Date.now())+Math.random(),type,title,body,duration:5200};save()}
@@ -439,14 +451,14 @@ console.info("[OPH] YUMIYA REMOTE FINAL-11 // KEYMASTER");
     },
     stopProcessing:async()=>{state.comms.processing={active:false,targetUid:"all",targetPlayerId:"",label:"PROCESSANDO SOLICITAÇÃO...",until:0};await save()}
   };
-  OPH.Realtime.onState(s=>{state=merge(s);stateLoaded=true;render();syncIncomingTimeline()});OPH.Realtime.onRequests(r=>{
+  OPH.Realtime.onState(s=>{state=merge(s);stateLoaded=true;safeRender();syncIncomingTimeline()});OPH.Realtime.onRequests(r=>{
     if(OPH.Realtime.getMode()==="firebase")requests=r||{};
     else{
       const merged=Object.assign({},requests);
       for(const [uid,node] of Object.entries(r||{}))merged[uid]=Object.assign({},merged[uid]||{},node||{});
       requests=merged;
     }
-    renderRequests();renderChat();renderOperatorProfiles();syncIncomingTimeline()
+    safeYumiyaRender();syncIncomingTimeline()
   });
-  window.addEventListener("DOMContentLoaded",()=>{$("room").value=room;$("firebaseLogin").classList.toggle("hidden",!window.OPH_CONFIG?.firebase?.enabled);$("localLogin").classList.toggle("hidden",!!window.OPH_CONFIG?.firebase?.enabled);$("chatReply").addEventListener("keydown",e=>{if(e.key==="Enter"&&e.ctrlKey){e.preventDefault();sendComms()}});$("chatTarget")?.addEventListener("change",e=>{if(e.target.value!=="all"){selectedProfileUid=e.target.value;renderOperatorProfiles()}renderContactTools()});render()});
+  window.addEventListener("DOMContentLoaded",()=>{document.addEventListener("focusout",()=>{if(renderDeferred)setTimeout(()=>{if(!yumiyaControlBusy())safeRender()},40)});$("room").value=room;$("firebaseLogin").classList.toggle("hidden",!window.OPH_CONFIG?.firebase?.enabled);$("localLogin").classList.toggle("hidden",!!window.OPH_CONFIG?.firebase?.enabled);$("chatReply").addEventListener("keydown",e=>{if(e.key==="Enter"&&e.ctrlKey){e.preventDefault();sendComms()}});$("chatTarget")?.addEventListener("change",e=>{if(e.target.value!=="all"){selectedProfileUid=e.target.value;renderOperatorProfiles()}renderContactTools()});render()});
 })();

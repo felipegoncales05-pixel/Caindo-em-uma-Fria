@@ -1,5 +1,5 @@
 window.OPH = window.OPH || {};
-window.OPH_BUILD = "FINAL-11";
+window.OPH_BUILD = "DCX-OS-A1";
 OPH.DEFAULT_STATE = {
   version: 12,
   focusStage: 0,
@@ -11,7 +11,6 @@ OPH.DEFAULT_STATE = {
     n02: true,
     protocol: true,
     emergencySim: true,
-    family: false,
     comms: false
   },
   approaches: {
@@ -28,7 +27,6 @@ OPH.DEFAULT_STATE = {
   n02: {
     clues: { c1:false, c2:false, c3:false, c4:false, c5:false },
     imageMode: "auto",
-    family: false
   },
   emergency: { level:0, active:false },
   comms: {

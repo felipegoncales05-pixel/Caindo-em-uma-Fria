@@ -1,5 +1,5 @@
 window.OPH = window.OPH || {};
-console.info("[OPH] YUMIYA REMOTE FINAL-11 // PLAYER");
+console.info("[DCX OS] A1 // PLAYER // YUMIYA CORE FINAL-11");
 (() => {
   let state = OPH.cloneDefault();
   let room = new URLSearchParams(location.search).get("room") || localStorage.getItem("oph-room") || window.OPH_CONFIG.defaultRoom || "FRIA-01";
@@ -179,7 +179,7 @@ console.info("[OPH] YUMIYA REMOTE FINAL-11 // PLAYER");
     backdrop?.classList.toggle("hidden",!focusMode || !chatOpen);
     document.body.classList.toggle("yumiyaFocusActive",focusMode && chatOpen);
     if(btn){btn.classList.toggle("active",focusMode);btn.querySelector("b").textContent=focusMode?"VOLTAR AO COMPACTO":"ABRIR FOCUS"}
-    if(mode)mode.textContent=focusMode?"MODO: FOCUS // FINAL-11":"MODO: COMPACTO // FINAL-11";
+    if(mode)mode.textContent=focusMode?"MODO: FOCUS // DCX OS A1":"MODO: COMPACTO // DCX OS A1";
   }
   function toggleYumiyaFocus(force){
     focusMode=typeof force==="boolean"?force:!focusMode;
@@ -255,7 +255,6 @@ console.info("[OPH] YUMIYA REMOTE FINAL-11 // PLAYER");
     $("abilitiesList").innerHTML=OPH.N02_ABILITIES.map(a=>{const on=state.n02.clues[a[0]];return `<div class="ability ${on?'':'off'}"><span class="s">${on?'CONFIRMADA':'NÃO CONFIRMADA'}</span><h4>${on?a[1]+" "+a[2]:"? CAPACIDADE DESCONHECIDA"}</h4><p>${on?a[3]:"Ainda não existem evidências suficientes."}</p></div>`}).join("");
     $("profile").innerHTML=count<5?`<div class="card"><div class="tag">PERFIL PARCIAL</div><h3>${count}/5 fragmentos</h3><p>Use as abas de Intel e Capacidades para ver somente o que já pode ser tratado como fato.</p></div>`:
     `<div class="card"><div class="tag">PERFIL CONSOLIDADO</div><h3>AGREGADO GENÉTICO DE CONTRAMEDIDA</h3><p>N-02 é uma criação deliberada da RAIN composta por múltiplos materiais biológicos. Aprende rotinas, caça em baixa circulação, usa teto/parede/dutos e pode fabricar vibrações capazes de enganar o sentido aracnídeo da Reina. Capturado vivo, vira a prova física mais forte contra a RAIN.</p><div class="sep"></div><p><b>Contramedidas prováveis:</b> luz forte, frio, saturação vibracional/sonora e contenção coordenada.</p></div>`;
-    $("family").classList.toggle("hidden",!(state.visible.family||state.n02.family));
   }
   function renderEmergency(){
     const e=OPH.EMERGENCY_STATES[state.emergency.level||0];$("emStatus").textContent=e.status;$("emTitle").textContent=e.title;$("emText").textContent=e.text;$("emMeter").style.width=e.meter+"%";
@@ -450,7 +449,7 @@ console.info("[OPH] YUMIYA REMOTE FINAL-11 // PLAYER");
     }
     try{
       const r=await OPH.Realtime.connect({roomId:room,asHost:false});connected=true;playerUid=r.uid||OPH.Realtime.getUid();
-      $("conn").classList.add("on");$("mode").textContent=r.mode.toUpperCase();await publishYumiyaIdentity();toast("CONECTADO À SALA "+room);renderYumiya()
+      $("conn").classList.add("on");$("mode").textContent=r.mode.toUpperCase();await publishYumiyaIdentity();setTimeout(()=>window.DCX?.Player?.init?.(true),450);toast("CONECTADO À SALA "+room);renderYumiya()
     }
     catch(e){toast("FALHA AO CONECTAR");console.error(e)}
   }

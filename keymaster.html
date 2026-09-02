@@ -1,104 +1,122 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cair em uma Fria — Keymaster</title><link rel="stylesheet" href="shared.css?v=FINAL11">
-<script src="config.js?v=FINAL11"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script><script src="state.js?v=FINAL11"></script><script src="gm-data.js?v=FINAL11"></script><script src="realtime.js?v=FINAL11"></script></head>
-<body><div id="login" class="login"><div class="eyebrow">ACESSO DO NARRADOR</div><h2>KEYMASTER</h2><label>Sala</label><input id="room"><div id="firebaseLogin" class="hidden"><label>Email do narrador</label><input id="email" type="email"><label>Senha Firebase</label><input id="password" type="password"></div><div id="localLogin"><label>Credencial local</label><input id="localPassword" type="password" placeholder="credencial"></div><button class="btn gold" onclick="KM.connect()">ENTRAR</button></div>
-<div id="console" class="app hidden"><header class="top"><div class="brand"><small>DCX // KEYMASTER // REALTIME // FINAL-11</small><b>CAIR EM UMA FRIA — CONTROLE DA SESSÃO</b></div><div class="actions"><span class="btn" id="mode">OFFLINE</span><span class="btn">SALA: <b id="roomLabel"></b></span></div></header><div class="roomBar"><b>LINK DOS JOGADORES</b><input id="playerUrl" style="max-width:none;flex:1" readonly><button class="btn" onclick="KM.copyLink()">COPIAR</button></div>
-<div class="kmGrid"><aside class="side"><h3>VISIBILIDADE</h3><div id="visibility"></div><div class="group"><h3>FOCO GLOBAL</h3><div class="actions"><button class="btn" onclick="KM.focus(0)">01</button><button class="btn" onclick="KM.focus(1)">02</button><button class="btn" onclick="KM.focus(2)">03</button><button class="btn" onclick="KM.focus(3)">04</button><button class="btn" onclick="KM.focus(4)">05</button><button class="btn" onclick="KM.focus(5)">06</button><button class="btn" onclick="KM.focus(6)">07</button></div></div><div class="group"><h3>EVENTOS</h3><button class="btn red" onclick="KM.fireH01()">H-01 ATIVIDADE</button> <button class="btn red" onclick="KM.fireN02()">N-02 DETECTADO</button><input id="customTitle" placeholder="Título do alerta" style="width:100%;margin-top:7px;background:#050a0f;border:1px solid #354d62;color:#fff;border-radius:8px;padding:8px"><input id="customBody" placeholder="Mensagem" style="width:100%;margin-top:6px;background:#050a0f;border:1px solid #354d62;color:#fff;border-radius:8px;padding:8px"><button class="btn" style="margin-top:6px" onclick="KM.custom()">DISPARAR</button></div></aside>
-<main>
-<section class="adminPanel commsAdmin">
-  <div class="commsAdminHead">
-    <div><div class="tag">YUMIYA // REMOTE ASSIST // FINAL-11</div><h2>CAIXA DE COMUNICAÇÃO</h2></div>
-    <div class="actions"><span class="btn" id="chatInboxCount">0 PENDENTES</span><button class="btn red kmNukeBtn" onclick="KM.clearAllChat()">LIMPAR A PORRA TODA</button></div>
-  </div>
-  <div class="kmAffectPanel">
-    <div class="kmAffectHead"><div><span class="kmFieldLabel">TELEMETRIA EMOCIONAL // FALLBACK</span><b>ESTADO GLOBAL DA YUMIYA</b></div><small>Usado por quem não possui perfil exclusivo</small></div>
-    <div class="kmAffectGrid">
-      <div class="kmMoodControl">
-        <label for="yumiyaAngerCtl">RAIVA <b id="yumiyaAngerValue">12%</b></label>
-        <input type="range" id="yumiyaAngerCtl" min="0" max="100" value="12" oninput="KM.previewMood('anger',this.value)" onchange="KM.setMood('anger',this.value)">
-      </div>
-      <div class="kmMoodControl">
-        <label for="yumiyaTensionCtl">TENSÃO <b id="yumiyaTensionValue">18%</b></label>
-        <input type="range" id="yumiyaTensionCtl" min="0" max="100" value="18" oninput="KM.previewMood('tension',this.value)" onchange="KM.setMood('tension',this.value)">
-      </div>
-      <div class="kmMoodControl">
-        <label for="yumiyaEuphoriaCtl">EUFORIA <b id="yumiyaEuphoriaValue">10%</b></label>
-        <input type="range" id="yumiyaEuphoriaCtl" min="0" max="100" value="10" oninput="KM.previewMood('euphoria',this.value)" onchange="KM.setMood('euphoria',this.value)">
-      </div>
-      <div class="kmPortraitControl">
-        <label>PORTRAIT ATIVO</label>
-        <div class="kmPortraitButtons" id="yumiyaPortraitCtl">
-          <button class="btn" data-portrait="normal" onclick="KM.setPortrait('normal')">NORMAL</button>
-          <button class="btn" data-portrait="fear" onclick="KM.setPortrait('fear')">MEDO</button>
-          <button class="btn" data-portrait="embarrassed" onclick="KM.setPortrait('embarrassed')">ENVERGONHADA</button>
-          <button class="btn" data-portrait="anger" onclick="KM.setPortrait('anger')">RAIVA</button>
-          <button class="btn" data-portrait="happy" onclick="KM.setPortrait('happy')">FELIZ</button>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="kmOperatorProfilePanel">
-    <div class="kmOperatorProfileHead">
-      <div><span class="kmFieldLabel">CANAL INDIVIDUAL</span><b>PERFIL EXCLUSIVO DO OPERADOR</b><small>Portrait e telemetria podem ser diferentes para cada P-ID.</small></div>
-      <span class="kmProfileBadge" id="operatorProfileStatus">SEM OPERADOR</span>
-    </div>
-    <div class="kmOperatorSelectRow">
-      <label class="kmFieldLabel" for="operatorProfileSelect">OPERADOR</label>
-      <select id="operatorProfileSelect" class="kmSelect" onchange="KM.selectOperatorProfile(this.value)"><option value="">SELECIONE UM OPERADOR</option></select>
-      <label class="kmProfileToggle"><input type="checkbox" id="operatorProfileEnabled" onchange="KM.toggleOperatorProfile(this.checked)"><span>ATIVAR OVERRIDE INDIVIDUAL</span></label>
-    </div>
-    <div class="kmOperatorProfileBody" id="operatorProfileBody">
-      <div class="kmProfileSetupGrid">
-        <div><label class="kmFieldLabel" for="operatorPreset">PRESET VISUAL</label><select id="operatorPreset" class="kmSelect" onchange="KM.setOperatorPreset(this.value)"><option value="standard">PADRÃO</option><option value="kang">KANG // PRIVADO</option></select></div>
-        <div><label class="kmFieldLabel" for="operatorTone">TOM INTERPRETATIVO</label><select id="operatorTone" class="kmSelect" onchange="KM.setOperatorTone(this.value)"><option value="professional">PROFISSIONAL</option><option value="warm">CARINHOSA</option><option value="provocative">PROVOCATIVA</option><option value="cold">FRIA</option><option value="hostile">HOSTIL</option></select></div>
-      </div>
-      <div class="kmAffectGrid kmOperatorAffectGrid">
-        <div class="kmMoodControl"><label for="operatorAngerCtl">RAIVA <b id="operatorAngerValue">12%</b></label><input type="range" id="operatorAngerCtl" min="0" max="100" value="12" oninput="KM.previewOperatorMood('anger',this.value)" onchange="KM.setOperatorMood('anger',this.value)"></div>
-        <div class="kmMoodControl"><label for="operatorTensionCtl">TENSÃO <b id="operatorTensionValue">18%</b></label><input type="range" id="operatorTensionCtl" min="0" max="100" value="18" oninput="KM.previewOperatorMood('tension',this.value)" onchange="KM.setOperatorMood('tension',this.value)"></div>
-        <div class="kmMoodControl"><label for="operatorEuphoriaCtl">EUFORIA <b id="operatorEuphoriaValue">10%</b></label><input type="range" id="operatorEuphoriaCtl" min="0" max="100" value="10" oninput="KM.previewOperatorMood('euphoria',this.value)" onchange="KM.setOperatorMood('euphoria',this.value)"></div>
-        <div class="kmPortraitControl"><label>PORTRAIT DESTE OPERADOR</label><div class="kmPortraitButtons" id="operatorPortraitCtl"><button class="btn" data-portrait="normal" onclick="KM.setOperatorPortrait('normal')">NORMAL</button><button class="btn" data-portrait="fear" onclick="KM.setOperatorPortrait('fear')">MEDO</button><button class="btn" data-portrait="embarrassed" onclick="KM.setOperatorPortrait('embarrassed')">ENVERGONHADA</button><button class="btn" data-portrait="anger" onclick="KM.setOperatorPortrait('anger')">RAIVA</button><button class="btn" data-portrait="happy" onclick="KM.setOperatorPortrait('happy')">FELIZ</button></div></div>
-      </div>
-      <div class="kmProfileFoot"><span id="operatorAssetHint">Preset padrão usa os portraits atuais.</span><button class="btn" onclick="KM.resetOperatorProfile()">RESETAR PARA GLOBAL</button></div>
-    </div>
-  </div>
-  <div class="commsAdminGrid">
-    <div>
-      <h3>ENTRADAS DOS JOGADORES</h3>
-      <div id="chatInbox" class="chatInbox"></div>
-    </div>
-    <div>
-      <h3>RESPONDER COMO YUMIYA</h3>
-      <label class="kmFieldLabel">DESTINO</label>
-      <select id="chatTarget" class="kmSelect"><option value="all">TODOS // GLOBAL</option></select>
-      <div class="kmContactTools" id="kmContactTools">
-        <span id="kmContactInfo">SELECIONE UM OPERADOR DIRETO PARA GERENCIAR O CONTATO.</span>
-        <div class="actions">
-          <button class="btn red" id="deleteContactBtn" onclick="KM.deleteSelectedContact()">EXCLUIR CONTATO</button>
-          <button class="btn" id="dedupeContactBtn" onclick="KM.removeNameDuplicates()">REMOVER DUPLICADOS DO NOME</button>
-        </div>
-      </div>
-      <label class="kmFieldLabel">ESTILO</label>
-      <select id="chatStyle" class="kmSelect">
-        <option value="normal">NORMAL</option>
-        <option value="urgent">URGENTE</option>
-        <option value="glitch">GLITCH</option>
-      </select>
-      <label class="kmFieldLabel">MENSAGEM</label>
-      <textarea id="chatReply" class="kmTextarea" maxlength="900" rows="5" placeholder="Resposta da Yumiya..."></textarea>
-      <div class="actions" style="margin-top:8px">
-        <button class="btn" onclick="KM.processing()">PROCESSANDO</button>
-        <button class="btn" onclick="KM.stopProcessing()">PARAR STATUS</button>
-        <button class="btn gold" onclick="KM.sendComms()">TRANSMITIR</button>
-      </div>
-    </div>
-  </div>
-  <div class="sep"></div>
-  <div class="kmHistoryHead"><div><h3>HISTÓRICO DA YUMIYA</h3><small>Transmissões ativas da sala. Arquive individualmente o que quiser preservar.</small></div></div>
-  <div id="chatHistory" class="chatHistory"></div>
-  <div class="sep"></div>
-  <div class="kmArchiveHead">
-    <div><div class="tag">KEYMASTER // LOCAL PRIVATE</div><h3>ARQUIVO PRIVADO <span id="chatArchiveCount">0 ITENS</span></h3><small>Fica salvo somente neste navegador do Keymaster. Limpar o chat ativo não apaga este arquivo.</small></div>
-    <div class="actions"><button class="btn" onclick="KM.exportArchive()">EXPORTAR .JSON</button><button class="btn red" onclick="KM.clearArchive()">LIMPAR ARQUIVO</button></div>
-  </div>
-  <div id="chatArchive" class="kmArchive"></div>
-</section>
-<section class="adminPanel" style="margin-top:12px"><h2>ABORDAGENS</h2><div class="adminList" id="approachCtl"></div></section><section class="adminPanel" style="margin-top:12px"><h2 id="prepCtlTitle">Preparações</h2><div id="prepCtl"></div></section><section class="adminPanel" style="margin-top:12px"><h2>N-02 // KEYMASTERS</h2><div class="actions"><button class="btn" onclick="KM.imageMode('hidden')">Imagem oculta</button><button class="btn" onclick="KM.imageMode('partial')">Parcial</button><button class="btn" onclick="KM.imageMode('full')">Completa</button><button class="btn" onclick="KM.imageMode('auto')">Auto</button></div><div class="adminList" id="clueCtl" style="margin-top:10px"></div></section><section class="adminPanel" style="margin-top:12px"><h2>CHAVES ENVIADAS PELOS JOGADORES</h2><div id="requests"></div></section><section class="adminPanel" style="margin-top:12px"><h2>H-01 // SIMULAÇÃO GLOBAL</h2><input type="range" id="emLevel" min="0" max="3" value="0" onchange="KM.emergency(this.value)"><p id="emLevelLabel" style="color:#9fb1c1"></p></section></main></div></div><div class="toast" id="toast"></div><script src="keymaster.js?v=FINAL11"></script></body></html>
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>Cair em uma Fria — Keymaster</title><link href="shared.css?v=DCXOSA1" rel="stylesheet"/>
+<script src="config.js?v=DCXOSA1"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script><script src="state.js?v=DCXOSA1"></script><script src="gm-data.js?v=DCXOSA1"></script><script src="realtime.js?v=DCXOSA1"></script><link href="dcx-os.css?v=DCXOSA1" rel="stylesheet"/></head>
+<body><div class="login" id="login"><div class="eyebrow">ACESSO DO NARRADOR</div><h2>KEYMASTER</h2><label>Sala</label><input id="room"/><div class="hidden" id="firebaseLogin"><label>Email do narrador</label><input id="email" type="email"/><label>Senha Firebase</label><input id="password" type="password"/></div><div id="localLogin"><label>Credencial local</label><input id="localPassword" placeholder="credencial" type="password"/></div><button class="btn gold" onclick="KM.connect()">ENTRAR</button></div>
+<div class="app hidden" id="console"><header class="top"><div class="brand"><small>DCX // KEYMASTER // DCX OS A1</small><b>CAIR EM UMA FRIA — CONTROLE DA SESSÃO</b></div><div class="actions"><span class="btn" id="mode">OFFLINE</span><span class="btn">SALA: <b id="roomLabel"></b></span></div></header><div class="roomBar"><b>LINK DOS JOGADORES</b><input id="playerUrl" readonly="" style="max-width:none;flex:1"/><button class="btn" onclick="KM.copyLink()">COPIAR</button></div><nav class="kmWorkspaceTabs" id="kmWorkspaceTabs">
+<button class="kmWorkspaceTab active" data-tab="master">MASTER</button>
+<button class="kmWorkspaceTab" data-tab="operation">OPERAÇÃO</button>
+<button class="kmWorkspaceTab" data-tab="players">PLAYER DATA</button>
+<button class="kmWorkspaceTab" data-tab="teams">EQUIPES // STATUS</button>
+<button class="kmWorkspaceTab" data-tab="notes">ANOTAÇÕES</button>
+<button class="kmWorkspaceTab" data-tab="handouts">HANDOUTS</button>
+<button class="kmWorkspaceTab" data-tab="yumiya">YUMIYA // REMOTE <i class="badge hidden" id="dcxYumiyaTabBadge">0</i></button>
+</nav><section class="kmWorkspaceView active" data-km-view="master"><div class="kmSingle">
+<section class="dcxPanel"><div class="dcxPanelHead"><div><span class="tag">DCX OS // MASTER</span><h2>CONTROLE DA SALA</h2><p>Diagnóstico, participantes e infraestrutura da operação.</p></div><div class="dcxMasterActions"><button class="btn" onclick="DCX.Admin.copyPlayerLink()">COPIAR LINK DO PLAYER</button></div></div>
+<div class="dcxStats" id="dcxMasterStats"></div><div class="dcxInfoGrid"><div class="dcxInfo"><small>SALA</small><b id="dcxMasterRoom">—</b></div><div class="dcxInfo"><small>BUILD DO KEYMASTER</small><b id="dcxMasterBuild">—</b></div><div class="dcxInfo"><small>UID DO KEYMASTER</small><b id="dcxMasterUid">—</b></div></div></section>
+<section class="dcxPanel" style="margin-top:12px"><div class="dcxPanelHead"><div><span class="tag">HEARTBEAT // ATENÇÃO</span><h2>ATIVIDADE DOS JOGADORES</h2><p>Detecta guia oculta/minimizada, falta de foco e último heartbeat. Não identifica qual outra guia o jogador abriu.</p></div></div><div class="dcxHeartbeatList" id="dcxHeartbeatList"></div></section>
+<section class="dcxPanel" style="margin-top:12px"><div class="dcxPanelHead"><div><span class="tag">ACESSO // PRÓXIMA FASE</span><h2>KEYS E APROVAÇÃO</h2><p>A fundação Firebase já existe, mas o bloqueio/login por Key permanece desativado nesta fase para não interromper os clientes atuais.</p></div></div></section>
+</div></section><section class="kmWorkspaceView" data-km-view="operation"><div class="kmOperationGrid"><div class="kmGrid"><aside class="side"><h3>VISIBILIDADE</h3><div id="visibility"></div><div class="group"><h3>FOCO GLOBAL</h3><div class="actions"><button class="btn" onclick="KM.focus(0)">01</button><button class="btn" onclick="KM.focus(1)">02</button><button class="btn" onclick="KM.focus(2)">03</button><button class="btn" onclick="KM.focus(3)">04</button><button class="btn" onclick="KM.focus(4)">05</button><button class="btn" onclick="KM.focus(5)">06</button><button class="btn" onclick="KM.focus(6)">07</button></div></div><div class="group"><h3>EVENTOS</h3><button class="btn red" onclick="KM.fireH01()">H-01 ATIVIDADE</button> <button class="btn red" onclick="KM.fireN02()">N-02 DETECTADO</button><input id="customTitle" placeholder="Título do alerta" style="width:100%;margin-top:7px;background:#050a0f;border:1px solid #354d62;color:#fff;border-radius:8px;padding:8px"/><input id="customBody" placeholder="Mensagem" style="width:100%;margin-top:6px;background:#050a0f;border:1px solid #354d62;color:#fff;border-radius:8px;padding:8px"/><button class="btn" onclick="KM.custom()" style="margin-top:6px">DISPARAR</button></div></aside><main><section class="adminPanel" style="margin-top:12px"><h2>ABORDAGENS</h2><div class="adminList" id="approachCtl"></div></section><section class="adminPanel" style="margin-top:12px"><h2 id="prepCtlTitle">Preparações</h2><div id="prepCtl"></div></section><section class="adminPanel" style="margin-top:12px"><h2>N-02 // KEYMASTERS</h2><div class="actions"><button class="btn" onclick="KM.imageMode('hidden')">Imagem oculta</button><button class="btn" onclick="KM.imageMode('partial')">Parcial</button><button class="btn" onclick="KM.imageMode('full')">Completa</button><button class="btn" onclick="KM.imageMode('auto')">Auto</button></div><div class="adminList" id="clueCtl" style="margin-top:10px"></div></section><section class="adminPanel" style="margin-top:12px"><h2>CHAVES ENVIADAS PELOS JOGADORES</h2><div id="requests"></div></section><section class="adminPanel" style="margin-top:12px"><h2>H-01 // SIMULAÇÃO GLOBAL</h2><input id="emLevel" max="3" min="0" onchange="KM.emergency(this.value)" type="range" value="0"/><p id="emLevelLabel" style="color:#9fb1c1"></p></section></main></div></div></section><section class="kmWorkspaceView" data-km-view="players"><div class="kmSingle"><div class="dcxAdminGrid"><section class="dcxPanel"><div class="dcxPanelHead"><div><span class="tag">PLAYER DATA</span><h2>PARTICIPANTES REAIS</h2><p>P-IDs sincronizados da sala.</p></div></div><div class="dcxOperatorList" id="dcxPlayerList"></div></section><section class="dcxPanel" id="dcxPlayerEditor"><div class="dcxEmpty big">Selecione um jogador para administrar.</div></section></div></div></section><section class="kmWorkspaceView" data-km-view="teams"><div class="kmSingle">
+<section class="dcxPanel"><div class="dcxPanelHead"><div><span class="tag">EQUIPES // STATUS</span><h2>ORGANIZAÇÃO OPERACIONAL</h2><p>Jogadores e NPCs compartilham os mesmos campos narrativos. Somente o Keymaster edita.</p></div></div>
+<div class="dcxCreateGrid"><label>NOVA EQUIPE<input id="dcxNewTeamName" maxlength="48" placeholder="Nome da equipe"/></label><label>CODINOME<input id="dcxNewTeamCode" maxlength="32" placeholder="Opcional"/></label><label class="wide">DESCRIÇÃO<textarea id="dcxNewTeamDesc" maxlength="500" placeholder="Descrição opcional da função da equipe" rows="2"></textarea></label></div><div class="actions"><button class="btn gold" onclick="DCX.Admin.createTeam()">CRIAR EQUIPE</button></div>
+<div class="sep"></div><div class="dcxCreateGrid"><label>NOVO NPC<input id="dcxNpcName" maxlength="48" placeholder="Nome do NPC"/></label><div style="display:flex;align-items:end"><button class="btn" onclick="DCX.Admin.createNpc()">CRIAR NPC</button></div></div></section>
+<section class="dcxPanel" style="margin-top:12px"><div class="dcxPanelHead"><div><span class="tag">SEM ALOCAÇÃO</span><h2>OPERADORES SEM EQUIPE</h2></div></div><div class="dcxUnassigned" id="dcxUnassigned"></div></section>
+<section class="dcxPanel" style="margin-top:12px"><div class="dcxTeamList" id="dcxTeamList"></div></section>
+<div class="dcxModal hidden" id="dcxRosterEditor"></div>
+</div></section><section class="kmWorkspaceView" data-km-view="notes"><div class="kmSingle"><div class="dcxPlaceholder"><div><b>ANOTAÇÕES // FUNDAÇÃO PRONTA</b><small>O módulo Firebase já foi reservado. Editor, autosave, histórico, notas por jogador e exportação PDF entram na próxima etapa da Mega Update.</small></div></div></div></section><section class="kmWorkspaceView" data-km-view="handouts"><div class="kmSingle"><div class="dcxPlaceholder"><div><b>HANDOUTS // FUNDAÇÃO PRONTA</b><small>Metadados já possuem espaço no Firebase. Upload, destinatários, confirmação de leitura e arquivos entram depois da base de operadores/equipes estabilizar.</small></div></div></div></section><section class="kmWorkspaceView" data-km-view="yumiya"><div class="kmSingle"><section class="adminPanel commsAdmin">
+<div class="commsAdminHead">
+<div><div class="tag">YUMIYA // REMOTE ASSIST // CORE FINAL-11</div><h2>CAIXA DE COMUNICAÇÃO</h2></div>
+<div class="actions"><span class="btn" id="chatInboxCount">0 PENDENTES</span><button class="btn red kmNukeBtn" onclick="KM.clearAllChat()">LIMPAR A PORRA TODA</button></div>
+</div>
+<div class="kmAffectPanel">
+<div class="kmAffectHead"><div><span class="kmFieldLabel">TELEMETRIA EMOCIONAL // FALLBACK</span><b>ESTADO GLOBAL DA YUMIYA</b></div><small>Usado por quem não possui perfil exclusivo</small></div>
+<div class="kmAffectGrid">
+<div class="kmMoodControl">
+<label for="yumiyaAngerCtl">RAIVA <b id="yumiyaAngerValue">12%</b></label>
+<input id="yumiyaAngerCtl" max="100" min="0" onchange="KM.setMood('anger',this.value)" oninput="KM.previewMood('anger',this.value)" type="range" value="12"/>
+</div>
+<div class="kmMoodControl">
+<label for="yumiyaTensionCtl">TENSÃO <b id="yumiyaTensionValue">18%</b></label>
+<input id="yumiyaTensionCtl" max="100" min="0" onchange="KM.setMood('tension',this.value)" oninput="KM.previewMood('tension',this.value)" type="range" value="18"/>
+</div>
+<div class="kmMoodControl">
+<label for="yumiyaEuphoriaCtl">EUFORIA <b id="yumiyaEuphoriaValue">10%</b></label>
+<input id="yumiyaEuphoriaCtl" max="100" min="0" onchange="KM.setMood('euphoria',this.value)" oninput="KM.previewMood('euphoria',this.value)" type="range" value="10"/>
+</div>
+<div class="kmPortraitControl">
+<label>PORTRAIT ATIVO</label>
+<div class="kmPortraitButtons" id="yumiyaPortraitCtl">
+<button class="btn" data-portrait="normal" onclick="KM.setPortrait('normal')">NORMAL</button>
+<button class="btn" data-portrait="fear" onclick="KM.setPortrait('fear')">MEDO</button>
+<button class="btn" data-portrait="embarrassed" onclick="KM.setPortrait('embarrassed')">ENVERGONHADA</button>
+<button class="btn" data-portrait="anger" onclick="KM.setPortrait('anger')">RAIVA</button>
+<button class="btn" data-portrait="happy" onclick="KM.setPortrait('happy')">FELIZ</button>
+</div>
+</div>
+</div>
+</div>
+<div class="kmOperatorProfilePanel">
+<div class="kmOperatorProfileHead">
+<div><span class="kmFieldLabel">CANAL INDIVIDUAL</span><b>PERFIL EXCLUSIVO DO OPERADOR</b><small>Portrait e telemetria podem ser diferentes para cada P-ID.</small></div>
+<span class="kmProfileBadge" id="operatorProfileStatus">SEM OPERADOR</span>
+</div>
+<div class="kmOperatorSelectRow">
+<label class="kmFieldLabel" for="operatorProfileSelect">OPERADOR</label>
+<select class="kmSelect" id="operatorProfileSelect" onchange="KM.selectOperatorProfile(this.value)"><option value="">SELECIONE UM OPERADOR</option></select>
+<label class="kmProfileToggle"><input id="operatorProfileEnabled" onchange="KM.toggleOperatorProfile(this.checked)" type="checkbox"/><span>ATIVAR OVERRIDE INDIVIDUAL</span></label>
+</div>
+<div class="kmOperatorProfileBody" id="operatorProfileBody">
+<div class="kmProfileSetupGrid">
+<div><label class="kmFieldLabel" for="operatorPreset">PRESET VISUAL</label><select class="kmSelect" id="operatorPreset" onchange="KM.setOperatorPreset(this.value)"><option value="standard">PADRÃO</option><option value="kang">KANG // PRIVADO</option></select></div>
+<div><label class="kmFieldLabel" for="operatorTone">TOM INTERPRETATIVO</label><select class="kmSelect" id="operatorTone" onchange="KM.setOperatorTone(this.value)"><option value="professional">PROFISSIONAL</option><option value="warm">CARINHOSA</option><option value="provocative">PROVOCATIVA</option><option value="cold">FRIA</option><option value="hostile">HOSTIL</option></select></div>
+</div>
+<div class="kmAffectGrid kmOperatorAffectGrid">
+<div class="kmMoodControl"><label for="operatorAngerCtl">RAIVA <b id="operatorAngerValue">12%</b></label><input id="operatorAngerCtl" max="100" min="0" onchange="KM.setOperatorMood('anger',this.value)" oninput="KM.previewOperatorMood('anger',this.value)" type="range" value="12"/></div>
+<div class="kmMoodControl"><label for="operatorTensionCtl">TENSÃO <b id="operatorTensionValue">18%</b></label><input id="operatorTensionCtl" max="100" min="0" onchange="KM.setOperatorMood('tension',this.value)" oninput="KM.previewOperatorMood('tension',this.value)" type="range" value="18"/></div>
+<div class="kmMoodControl"><label for="operatorEuphoriaCtl">EUFORIA <b id="operatorEuphoriaValue">10%</b></label><input id="operatorEuphoriaCtl" max="100" min="0" onchange="KM.setOperatorMood('euphoria',this.value)" oninput="KM.previewOperatorMood('euphoria',this.value)" type="range" value="10"/></div>
+<div class="kmPortraitControl"><label>PORTRAIT DESTE OPERADOR</label><div class="kmPortraitButtons" id="operatorPortraitCtl"><button class="btn" data-portrait="normal" onclick="KM.setOperatorPortrait('normal')">NORMAL</button><button class="btn" data-portrait="fear" onclick="KM.setOperatorPortrait('fear')">MEDO</button><button class="btn" data-portrait="embarrassed" onclick="KM.setOperatorPortrait('embarrassed')">ENVERGONHADA</button><button class="btn" data-portrait="anger" onclick="KM.setOperatorPortrait('anger')">RAIVA</button><button class="btn" data-portrait="happy" onclick="KM.setOperatorPortrait('happy')">FELIZ</button></div></div>
+</div>
+<div class="kmProfileFoot"><span id="operatorAssetHint">Preset padrão usa os portraits atuais.</span><button class="btn" onclick="KM.resetOperatorProfile()">RESETAR PARA GLOBAL</button></div>
+</div>
+</div>
+<div class="commsAdminGrid">
+<div>
+<h3>ENTRADAS DOS JOGADORES</h3>
+<div class="chatInbox" id="chatInbox"></div>
+</div>
+<div>
+<h3>RESPONDER COMO YUMIYA</h3>
+<label class="kmFieldLabel">DESTINO</label>
+<select class="kmSelect" id="chatTarget"><option value="all">TODOS // GLOBAL</option></select>
+<div class="kmContactTools" id="kmContactTools">
+<span id="kmContactInfo">SELECIONE UM OPERADOR DIRETO PARA GERENCIAR O CONTATO.</span>
+<div class="actions">
+<button class="btn red" id="deleteContactBtn" onclick="KM.deleteSelectedContact()">EXCLUIR CONTATO</button>
+<button class="btn" id="dedupeContactBtn" onclick="KM.removeNameDuplicates()">REMOVER DUPLICADOS DO NOME</button>
+</div>
+</div>
+<label class="kmFieldLabel">ESTILO</label>
+<select class="kmSelect" id="chatStyle">
+<option value="normal">NORMAL</option>
+<option value="urgent">URGENTE</option>
+<option value="glitch">GLITCH</option>
+</select>
+<label class="kmFieldLabel">MENSAGEM</label>
+<textarea class="kmTextarea" id="chatReply" maxlength="900" placeholder="Resposta da Yumiya..." rows="5"></textarea>
+<div class="actions" style="margin-top:8px">
+<button class="btn" onclick="KM.processing()">PROCESSANDO</button>
+<button class="btn" onclick="KM.stopProcessing()">PARAR STATUS</button>
+<button class="btn gold" onclick="KM.sendComms()">TRANSMITIR</button>
+</div>
+</div>
+</div>
+<div class="sep"></div>
+<div class="kmHistoryHead"><div><h3>HISTÓRICO DA YUMIYA</h3><small>Transmissões ativas da sala. Arquive individualmente o que quiser preservar.</small></div></div>
+<div class="chatHistory" id="chatHistory"></div>
+<div class="sep"></div>
+<div class="kmArchiveHead">
+<div><div class="tag">KEYMASTER // LOCAL PRIVATE</div><h3>ARQUIVO PRIVADO <span id="chatArchiveCount">0 ITENS</span></h3><small>Fica salvo somente neste navegador do Keymaster. Limpar o chat ativo não apaga este arquivo.</small></div>
+<div class="actions"><button class="btn" onclick="KM.exportArchive()">EXPORTAR .JSON</button><button class="btn red" onclick="KM.clearArchive()">LIMPAR ARQUIVO</button></div>
+</div>
+<div class="kmArchive" id="chatArchive"></div>
+</section></div></section>
+</div><div class="toast" id="toast"></div><script src="keymaster.js?v=DCXOSA1"></script><script src="dcx-admin.js?v=DCXOSA1"></script></body></html>

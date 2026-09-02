@@ -1,0 +1,54 @@
+DCX OS // A1 — FUNDAÇÃO ADMINISTRATIVA
+======================================
+
+BASE REAL USADA
+- Este pacote foi criado diretamente sobre o ZIP atual do GitHub enviado pelo usuário.
+- A base encontrada era FINAL-11.
+- config.js, gm-data.js, player-data.js, n02.png e os 5 portraits foram preservados.
+
+NOVO NESTA FASE
+1. Keymaster separado em abas:
+   MASTER | OPERAÇÃO | PLAYER DATA | EQUIPES // STATUS | ANOTAÇÕES | HANDOUTS | YUMIYA // REMOTE
+2. Reina's Family removido da interface/estrutura visível.
+3. PLAYER DATA:
+   - sincroniza P-IDs existentes;
+   - editar nome;
+   - equipe, função, status, localização e comunicação;
+   - remover registro.
+4. EQUIPES // STATUS:
+   - criar/excluir equipe;
+   - editar nome, codinome, descrição e status em tempo real;
+   - criar NPC com nome;
+   - editar NPC como operador narrativo;
+   - renomear/excluir NPC;
+   - mover jogadores/NPCs entre equipes.
+5. Player recebe painel read-only EQUIPE // STATUS.
+6. Heartbeat administrativo:
+   - ATIVO;
+   - OUTRA GUIA / MINIMIZADO;
+   - SEM FOCO;
+   - INATIVO;
+   - OFFLINE;
+   - build e última interação.
+7. Yumiya permanece com o CORE FINAL-11 atual, agora isolado em aba própria.
+8. Correção adicional no Keymaster: renderizações da Yumiya são adiadas enquanto um input/select/slider está focado, evitando o controle ser destruído durante a interação. Override desligado não bloqueia mais os controles por CSS.
+
+IMPORTANTE — ORDEM DE INSTALAÇÃO
+1. Firebase Realtime Database > Regras.
+2. Substitua as regras pelas regras de firebase-rules-DCX-OS-A1.txt.
+3. Publique as regras.
+4. Só depois envie os arquivos do site para o GitHub.
+
+A árvore rooms/FRIA-01/dcx já precisa existir (ela foi criada na etapa anterior).
+
+NÃO IMPLEMENTADO AINDA
+- Login por Key / aprovação / bloqueio definitivo;
+- editor de anotações;
+- Handouts;
+- votações;
+- canal de equipe;
+- notificações;
+- mensagens agendadas;
+- checkpoints funcionais;
+- COMMS JAM funcional.
+Os nós Firebase já estão reservados para essas etapas.

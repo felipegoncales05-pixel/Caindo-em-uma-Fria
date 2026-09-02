@@ -1,80 +1,80 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cair em uma Fria — Jogadores</title><link rel="stylesheet" href="shared.css?v=FINAL11">
-<script src="config.js?v=FINAL11"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script><script src="state.js?v=FINAL11"></script><script src="player-data.js?v=FINAL11"></script><script src="realtime.js?v=FINAL11"></script></head>
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>Cair em uma Fria — Jogadores</title><link href="shared.css?v=DCXOSA1" rel="stylesheet"/>
+<script src="config.js?v=DCXOSA1"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script><script src="state.js?v=DCXOSA1"></script><script src="player-data.js?v=DCXOSA1"></script><script src="realtime.js?v=DCXOSA1"></script><link href="dcx-os.css?v=DCXOSA1" rel="stylesheet"/></head>
 <body><div class="app">
-<header class="top"><div class="brand"><small>DCX // CONSOLE TÁTICO // REALTIME</small><b>CAIR EM UMA FRIA — OPERAÇÃO H</b></div><div class="actions"><label class="follow"><input id="followHost" type="checkbox" checked> seguir narrador</label><span class="statusDot" id="conn"></span><span class="btn" id="mode">OFFLINE</span></div></header>
-<div class="roomBar"><b>SALA</b><input id="room"><b>NOME</b><input id="name" placeholder="Jogador"><button class="btn" onclick="OPHPlayer.connect()">CONECTAR</button></div>
+<header class="top"><div class="brand"><small>DCX // CONSOLE TÁTICO // DCX OS A1</small><b>CAIR EM UMA FRIA — OPERAÇÃO H</b></div><div class="actions"><label class="follow"><input checked="" id="followHost" type="checkbox"/> seguir narrador</label><span class="statusDot" id="conn"></span><span class="btn" id="mode">OFFLINE</span></div></header>
+<div class="roomBar"><b>SALA</b><input id="room"/><b>NOME</b><input id="name" placeholder="Jogador"/><button class="btn" onclick="OPHPlayer.connect()">CONECTAR</button></div>
 <nav class="nav" id="nav"></nav>
 <main class="screen">
-<section class="view active" data-stage="0"><div class="eyebrow">ARQUIVO SIGILOSO</div><h1 class="display">CAIR EM<br>UMA FRIA <span>OPERAÇÃO H // A MISSÃO COMEÇA ANTES DA INVASÃO</span></h1><p class="lead">A DCX recebeu autorização para recuperar um ativo mantido dentro de uma unidade da RAIN em território japonês. A autorização existe. A confiança, não.</p><div class="card" style="margin-top:28px;max-width:900px"><div class="tag">AVISO DO GABINETE</div><h3>“Cada ação terá que ser justificável depois.”</h3><p>O objetivo não é vencer uma guerra contra a RAIN. É sair com o ativo sem criar outro escândalo nacional.</p></div></section>
-<section class="view" data-stage="1"><div class="eyebrow">SITUAÇÃO POLÍTICA</div><h2 class="title">A DCX ESTÁ<br>SENDO OBSERVADA.</h2><div class="cols2"><p class="lead">Depois de incidentes públicos recentes, o governo japonês exige uma operação precisa, controlada e documentável. Recuperar H-01 também é uma chance de provar que a DCX ainda merece autonomia.</p><div class="rules"><div class="rule"><b>Civis não são alvos.</b><p>Funcionários e visitantes entram primeiro na lista de proteção.</p></div><div class="rule"><b>Dano estrutural mínimo.</b><p>Sem cratera na RAIN.</p></div><div class="rule"><b>Força letal restrita.</b><p>Somente sob ameaça imediata à vida.</p></div><div class="rule"><b>Sem crise nacional.</b><p>A missão foi autorizada. Um desastre diplomático, não.</p></div></div></div></section>
-<section class="view" data-stage="2"><div class="eyebrow">OBJETIVO PRIMÁRIO // H-01</div><h2 class="title">NÃO ACORDE<br>O RUSSO.</h2><div class="cols2"><div class="card"><div class="tag">SUBJECT H-01</div><h3>Extração criogênica</h3><p>A cápsula faz parte do objetivo. Se ele despertar, deixa de ser carga e vira evento de contenção.</p><div class="sep"></div><div class="chips"><span class="chip">Plano H</span><span class="chip">Kaboom</span><span class="chip">Capsula fechada</span></div></div><div class="emergencyBox hidden" id="emSim"><div class="tag">SIMULAR EMERGÊNCIA</div><h3 id="emTitle"></h3><div class="meter"><i id="emMeter"></i></div><p id="emText"></p><div class="sep"></div><div id="emStatus" class="tag"></div></div></div></section>
-<section class="view" data-stage="3"><div class="eyebrow">PLANEJAMENTO</div><h2 class="title">COMO<br>ENTRAMOS?</h2><div class="approaches" id="approachGrid"></div></section>
+<section class="view active" data-stage="0"><div class="eyebrow">ARQUIVO SIGILOSO</div><h1 class="display">CAIR EM<br/>UMA FRIA <span>OPERAÇÃO H // A MISSÃO COMEÇA ANTES DA INVASÃO</span></h1><p class="lead">A DCX recebeu autorização para recuperar um ativo mantido dentro de uma unidade da RAIN em território japonês. A autorização existe. A confiança, não.</p><div class="card" style="margin-top:28px;max-width:900px"><div class="tag">AVISO DO GABINETE</div><h3>“Cada ação terá que ser justificável depois.”</h3><p>O objetivo não é vencer uma guerra contra a RAIN. É sair com o ativo sem criar outro escândalo nacional.</p></div></section>
+<section class="view" data-stage="1"><div class="eyebrow">SITUAÇÃO POLÍTICA</div><h2 class="title">A DCX ESTÁ<br/>SENDO OBSERVADA.</h2><div class="cols2"><p class="lead">Depois de incidentes públicos recentes, o governo japonês exige uma operação precisa, controlada e documentável. Recuperar H-01 também é uma chance de provar que a DCX ainda merece autonomia.</p><div class="rules"><div class="rule"><b>Civis não são alvos.</b><p>Funcionários e visitantes entram primeiro na lista de proteção.</p></div><div class="rule"><b>Dano estrutural mínimo.</b><p>Sem cratera na RAIN.</p></div><div class="rule"><b>Força letal restrita.</b><p>Somente sob ameaça imediata à vida.</p></div><div class="rule"><b>Sem crise nacional.</b><p>A missão foi autorizada. Um desastre diplomático, não.</p></div></div></div></section>
+<section class="view" data-stage="2"><div class="eyebrow">OBJETIVO PRIMÁRIO // H-01</div><h2 class="title">NÃO ACORDE<br/>O RUSSO.</h2><div class="cols2"><div class="card"><div class="tag">SUBJECT H-01</div><h3>Extração criogênica</h3><p>A cápsula faz parte do objetivo. Se ele despertar, deixa de ser carga e vira evento de contenção.</p><div class="sep"></div><div class="chips"><span class="chip">Plano H</span><span class="chip">Kaboom</span><span class="chip">Capsula fechada</span></div></div><div class="emergencyBox hidden" id="emSim"><div class="tag">SIMULAR EMERGÊNCIA</div><h3 id="emTitle"></h3><div class="meter"><i id="emMeter"></i></div><p id="emText"></p><div class="sep"></div><div class="tag" id="emStatus"></div></div></div></section>
+<section class="view" data-stage="3"><div class="eyebrow">PLANEJAMENTO</div><h2 class="title">COMO<br/>ENTRAMOS?</h2><div class="approaches" id="approachGrid"></div></section>
 <section class="view" data-stage="4"><div class="eyebrow">D-1 // PREPARAÇÃO</div><h2 class="title">ANTES DO GOLPE.</h2><div class="cols2"><div><div class="card"><div class="tag">ABORDAGEM</div><h3 id="prepTitle">TRAPAÇA</h3><p>O narrador atualiza este quadro em tempo real.</p></div><div class="preps" id="prepGrid" style="margin-top:10px"></div></div><div class="card"><div class="tag">CONCLUSÃO</div><h3 id="prepPct" style="font-size:64px">0%</h3><p>Preparações concluídas.</p></div></div></section>
-<section class="view" data-stage="5"><div class="eyebrow">RAIN // ARQUIVO BIOLÓGICO</div><h2 class="title">N-02</h2><div class="n02"><div class="specimen" id="specimen"><div class="specLabel">N-02 // BIOLOGICAL COUNTERMEASURE</div><img src="n02.png"><div class="mask"></div></div><div><div class="card"><div class="tag">DECODIFICAÇÃO</div><h3><span id="clueCount">0/5</span> fragmentos</h3><div class="progress"><i id="clueBar"></i></div><div class="decrypt"><input id="keyInput" placeholder="KEYMASTER DO FRAGMENTO"><button class="btn accent" onclick="OPHPlayer.submitKey()">DECODIFICAR</button></div></div><div class="tabs"><button class="tab active" data-tab="intel" onclick="OPHPlayer.switchTab('intel')">INTEL / PISTAS</button><button class="tab" data-tab="abilities" onclick="OPHPlayer.switchTab('abilities')">CAPACIDADES CONFIRMADAS</button><button class="tab" data-tab="profile" onclick="OPHPlayer.switchTab('profile')">PERFIL</button></div><div class="panel active" id="intel"><div id="fragments"></div></div><div class="panel" id="abilities"><div id="abilitiesList"></div></div><div class="panel" id="profile"></div><div class="card hidden" id="family" style="margin-top:10px"><div class="tag">EQUIPE DESIGNADA</div><h3>REINA'S FAMILY</h3><p>Reina: leitura biológica. Kang: contenção. Nadeko: suporte médico. Grace: acesso e genética.</p></div></div></div></section>
-<section class="view" data-stage="6"><div class="eyebrow">PROTOCOLO</div><h2 class="title">SE H-01 ACORDAR,<br>O GOLPE ACABOU.</h2><div class="card"><h3>Prioridade muda.</h3><p>Interromper escalada, evacuar civis, abrir distância, tentar comunicação/recontenção e assumir que usuários afetados podem ficar temporariamente sem energia.</p></div></section>
+<section class="view" data-stage="5"><div class="eyebrow">RAIN // ARQUIVO BIOLÓGICO</div><h2 class="title">N-02</h2><div class="n02"><div class="specimen" id="specimen"><div class="specLabel">N-02 // BIOLOGICAL COUNTERMEASURE</div><img src="n02.png"/><div class="mask"></div></div><div><div class="card"><div class="tag">DECODIFICAÇÃO</div><h3><span id="clueCount">0/5</span> fragmentos</h3><div class="progress"><i id="clueBar"></i></div><div class="decrypt"><input id="keyInput" placeholder="KEYMASTER DO FRAGMENTO"/><button class="btn accent" onclick="OPHPlayer.submitKey()">DECODIFICAR</button></div></div><div class="tabs"><button class="tab active" data-tab="intel" onclick="OPHPlayer.switchTab('intel')">INTEL / PISTAS</button><button class="tab" data-tab="abilities" onclick="OPHPlayer.switchTab('abilities')">CAPACIDADES CONFIRMADAS</button><button class="tab" data-tab="profile" onclick="OPHPlayer.switchTab('profile')">PERFIL</button></div><div class="panel active" id="intel"><div id="fragments"></div></div><div class="panel" id="abilities"><div id="abilitiesList"></div></div><div class="panel" id="profile"></div></div></div></section>
+<section class="view" data-stage="6"><div class="eyebrow">PROTOCOLO</div><h2 class="title">SE H-01 ACORDAR,<br/>O GOLPE ACABOU.</h2><div class="card"><h3>Prioridade muda.</h3><p>Interromper escalada, evacuar civis, abrir distância, tentar comunicação/recontenção e assumir que usuários afetados podem ficar temporariamente sem energia.</p></div></section>
 </main></div>
-
 <div class="yumiyaLauncher hidden" id="yumiyaLauncher">
-  <button class="yumiyaLaunchBtn" id="yumiyaLaunchBtn" onclick="OPHPlayer.toggleYumiyaChat()">
-    <span class="yumiyaLaunchMark">YK</span>
-    <span><b>YUMIYA // REMOTE</b><small id="yumiyaLaunchStatus">CANAL DISPONÍVEL</small></span>
-    <i id="yumiyaUnread" class="hidden">0</i>
-  </button>
+<button class="yumiyaLaunchBtn" id="yumiyaLaunchBtn" onclick="OPHPlayer.toggleYumiyaChat()">
+<span class="yumiyaLaunchMark">YK</span>
+<span><b>YUMIYA // REMOTE</b><small id="yumiyaLaunchStatus">CANAL DISPONÍVEL</small></span>
+<i class="hidden" id="yumiyaUnread">0</i>
+</button>
 </div>
-<div class="yumiyaFocusBackdrop hidden" id="yumiyaFocusBackdrop" onclick="OPHPlayer.toggleYumiyaFocus(false)" aria-hidden="true"></div>
-<section class="yumiyaChat hidden" id="yumiyaChat" aria-label="Yumiya Remote Assist">
-  <aside class="yumiyaFocusPortrait" id="yumiyaFocusPortrait" aria-label="Portrait de Yumiya">
-    <div class="yumiyaPortraitScan"></div>
-    <div class="yumiyaPortraitFallback" id="yumiyaPortraitFallback">
-      <span>YK</span>
-      <b>PORTRAIT // SLOT</b>
-      <small>adicione os 5 portraits da Yumiya</small>
-    </div>
-    <div class="yumiyaPortraitData">
-      <small>DCX // REMOTE OPERATOR</small>
-      <b>YUMIYA KIRYUIN</b>
-      <div class="yumiyaAffect" aria-label="Telemetria emocional">
-        <div class="affectRow"><label>RAIVA</label><div class="affectTrack anger"><i id="yumiyaAngerBar"></i></div><em id="yumiyaAngerWord">BAIXA</em></div>
-        <div class="affectRow"><label>TENSÃO</label><div class="affectTrack tension"><i id="yumiyaTensionBar"></i></div><em id="yumiyaTensionWord">BAIXA</em></div>
-        <div class="affectRow"><label>EUFORIA</label><div class="affectTrack euphoria"><i id="yumiyaEuphoriaBar"></i></div><em id="yumiyaEuphoriaWord">CONTIDA</em></div>
-      </div>
-      <span><i class="miniDot"></i> LINK CRIPTOGRAFADO</span>
-    </div>
-  </aside>
-  <header class="yumiyaChatHead">
-    <div class="yumiyaAvatar"><span>YK</span></div>
-    <div class="yumiyaIdentity">
-      <small>DCX // ASSISTÊNCIA REMOTA // FINAL-11</small>
-      <b>YUMIYA KIRYUIN</b>
-      <em><span class="miniDot"></span><span id="yumiyaStatus">CANAL SEGURO</span></em>
-    </div>
-    <button class="chatFocusBtn" id="yumiyaFocusBtn" onclick="OPHPlayer.toggleYumiyaFocus()" title="Abrir modo Focus"><span>⌗</span><b>ABRIR FOCUS</b></button>
-    <button class="chatIconBtn" onclick="OPHPlayer.toggleYumiyaChat(false)" title="Fechar">×</button>
-  </header>
-  <div class="yumiyaSystemLine"><span id="yumiyaChannelLabel">KIRYUIN RESPONSE INTERFACE // CONSULTAS OPERACIONAIS</span><b id="yumiyaViewMode">MODO: COMPACTO // FINAL-11</b></div>
-  <div class="yumiyaIdentityGate hidden" id="yumiyaIdentityGate">
-    <div class="tag">DCX // IDENTIFICAÇÃO DE OPERADOR</div>
-    <h3>IDENTIFIQUE-SE PARA ACESSAR O CANAL</h3>
-    <p>A identificação fica vinculada a este dispositivo durante a operação.</p>
-    <input id="yumiyaIdentityInput" maxlength="40" autocomplete="off" placeholder="Nome / personagem">
-    <button class="btn accent" onclick="OPHPlayer.confirmYumiyaIdentity()">CONECTAR AO CANAL</button>
-    <small>O narrador verá esta identificação junto das mensagens enviadas.</small>
-  </div>
-  <div class="yumiyaRenamePanel hidden" id="yumiyaRenamePanel" role="dialog" aria-modal="true" aria-labelledby="yumiyaRenameTitle">
-    <div class="tag">DCX // IDENTIDADE DO OPERADOR</div>
-    <h3 id="yumiyaRenameTitle">RENOMEAR OPERADOR</h3>
-    <p>Seu ID interno será preservado. O Keymaster passará a ver o novo nome sem perder o encaminhamento direto.</p>
-    <input id="yumiyaRenameInput" maxlength="40" autocomplete="off" placeholder="Novo nome / personagem">
-    <div class="yumiyaRenameActions"><button class="btn" onclick="OPHPlayer.cancelYumiyaRename()">CANCELAR</button><button class="btn accent" onclick="OPHPlayer.confirmYumiyaRename()">SALVAR NOME</button></div>
-    <small>O histórico antigo não é reescrito; novas mensagens usam o novo nome.</small>
-  </div>
-  <div class="yumiyaMessages" id="yumiyaMessages"></div>
-  <div class="yumiyaProcessing hidden" id="yumiyaProcessing"><i></i><span id="yumiyaProcessingText">PROCESSANDO SOLICITAÇÃO...</span></div>
-  <div class="yumiyaComposer" id="yumiyaComposer">
-    <textarea id="yumiyaInput" maxlength="700" rows="2" placeholder="Digite uma solicitação operacional..."></textarea>
-    <button class="btn accent" onclick="OPHPlayer.sendYumiyaMessage()">ENVIAR</button>
-  </div>
-  <div class="yumiyaFoot" id="yumiyaFoot"><span id="yumiyaOperator">OPERADOR ATIVO // NÃO IDENTIFICADO</span><button class="yumiyaReidentify" onclick="OPHPlayer.openYumiyaRename()"><span>✎</span> RENOMEAR OPERADOR</button></div>
+<div aria-hidden="true" class="yumiyaFocusBackdrop hidden" id="yumiyaFocusBackdrop" onclick="OPHPlayer.toggleYumiyaFocus(false)"></div>
+<section aria-label="Yumiya Remote Assist" class="yumiyaChat hidden" id="yumiyaChat">
+<aside aria-label="Portrait de Yumiya" class="yumiyaFocusPortrait" id="yumiyaFocusPortrait">
+<div class="yumiyaPortraitScan"></div>
+<div class="yumiyaPortraitFallback" id="yumiyaPortraitFallback">
+<span>YK</span>
+<b>PORTRAIT // SLOT</b>
+<small>adicione os 5 portraits da Yumiya</small>
+</div>
+<div class="yumiyaPortraitData">
+<small>DCX // REMOTE OPERATOR</small>
+<b>YUMIYA KIRYUIN</b>
+<div aria-label="Telemetria emocional" class="yumiyaAffect">
+<div class="affectRow"><label>RAIVA</label><div class="affectTrack anger"><i id="yumiyaAngerBar"></i></div><em id="yumiyaAngerWord">BAIXA</em></div>
+<div class="affectRow"><label>TENSÃO</label><div class="affectTrack tension"><i id="yumiyaTensionBar"></i></div><em id="yumiyaTensionWord">BAIXA</em></div>
+<div class="affectRow"><label>EUFORIA</label><div class="affectTrack euphoria"><i id="yumiyaEuphoriaBar"></i></div><em id="yumiyaEuphoriaWord">CONTIDA</em></div>
+</div>
+<span><i class="miniDot"></i> LINK CRIPTOGRAFADO</span>
+</div>
+</aside>
+<header class="yumiyaChatHead">
+<div class="yumiyaAvatar"><span>YK</span></div>
+<div class="yumiyaIdentity">
+<small>DCX // ASSISTÊNCIA REMOTA // CORE FINAL-11</small>
+<b>YUMIYA KIRYUIN</b>
+<em><span class="miniDot"></span><span id="yumiyaStatus">CANAL SEGURO</span></em>
+</div>
+<button class="chatFocusBtn" id="yumiyaFocusBtn" onclick="OPHPlayer.toggleYumiyaFocus()" title="Abrir modo Focus"><span>⌗</span><b>ABRIR FOCUS</b></button>
+<button class="chatIconBtn" onclick="OPHPlayer.toggleYumiyaChat(false)" title="Fechar">×</button>
+</header>
+<div class="yumiyaSystemLine"><span id="yumiyaChannelLabel">KIRYUIN RESPONSE INTERFACE // CONSULTAS OPERACIONAIS</span><b id="yumiyaViewMode">MODO: COMPACTO // DCX OS A1</b></div>
+<div class="yumiyaIdentityGate hidden" id="yumiyaIdentityGate">
+<div class="tag">DCX // IDENTIFICAÇÃO DE OPERADOR</div>
+<h3>IDENTIFIQUE-SE PARA ACESSAR O CANAL</h3>
+<p>A identificação fica vinculada a este dispositivo durante a operação.</p>
+<input autocomplete="off" id="yumiyaIdentityInput" maxlength="40" placeholder="Nome / personagem"/>
+<button class="btn accent" onclick="OPHPlayer.confirmYumiyaIdentity()">CONECTAR AO CANAL</button>
+<small>O narrador verá esta identificação junto das mensagens enviadas.</small>
+</div>
+<div aria-labelledby="yumiyaRenameTitle" aria-modal="true" class="yumiyaRenamePanel hidden" id="yumiyaRenamePanel" role="dialog">
+<div class="tag">DCX // IDENTIDADE DO OPERADOR</div>
+<h3 id="yumiyaRenameTitle">RENOMEAR OPERADOR</h3>
+<p>Seu ID interno será preservado. O Keymaster passará a ver o novo nome sem perder o encaminhamento direto.</p>
+<input autocomplete="off" id="yumiyaRenameInput" maxlength="40" placeholder="Novo nome / personagem"/>
+<div class="yumiyaRenameActions"><button class="btn" onclick="OPHPlayer.cancelYumiyaRename()">CANCELAR</button><button class="btn accent" onclick="OPHPlayer.confirmYumiyaRename()">SALVAR NOME</button></div>
+<small>O histórico antigo não é reescrito; novas mensagens usam o novo nome.</small>
+</div>
+<div class="yumiyaMessages" id="yumiyaMessages"></div>
+<div class="yumiyaProcessing hidden" id="yumiyaProcessing"><i></i><span id="yumiyaProcessingText">PROCESSANDO SOLICITAÇÃO...</span></div>
+<div class="yumiyaComposer" id="yumiyaComposer">
+<textarea id="yumiyaInput" maxlength="700" placeholder="Digite uma solicitação operacional..." rows="2"></textarea>
+<button class="btn accent" onclick="OPHPlayer.sendYumiyaMessage()">ENVIAR</button>
+</div>
+<div class="yumiyaFoot" id="yumiyaFoot"><span id="yumiyaOperator">OPERADOR ATIVO // NÃO IDENTIFICADO</span><button class="yumiyaReidentify" onclick="OPHPlayer.openYumiyaRename()"><span>✎</span> RENOMEAR OPERADOR</button></div>
 </section>
-
-<div class="eventOverlay" id="eventOverlay"><div class="eventCard"><div class="tag">BROADCAST DO KEYMASTER</div><h2 id="eventTitle"></h2><p id="eventBody"></p><button class="btn" onclick="document.getElementById('eventOverlay').classList.remove('show')">FECHAR</button></div></div><div class="toast" id="toast"></div><script src="player.js?v=FINAL11"></script></body></html>
+<div class="dcxDock" id="dcxDock"><button class="dcxDockBtn" onclick="DCX.Player.toggleTeam()"><span>▦</span><b>EQUIPE // STATUS</b></button></div>
+<section aria-label="Equipes e status" class="dcxTeamPanel hidden" id="dcxTeamPanel"><header class="dcxTeamPanelHead"><div><small>DCX // ORGANIZAÇÃO OPERACIONAL</small><b>EQUIPES // STATUS</b></div><button class="chatIconBtn" onclick="DCX.Player.toggleTeam(false)">×</button></header><div class="dcxTeamContent" id="dcxTeamContent"><div class="dcxEmpty big">Sincronizando equipes...</div></div></section><div class="eventOverlay" id="eventOverlay"><div class="eventCard"><div class="tag">BROADCAST DO KEYMASTER</div><h2 id="eventTitle"></h2><p id="eventBody"></p><button class="btn" onclick="document.getElementById('eventOverlay').classList.remove('show')">FECHAR</button></div></div><div class="toast" id="toast"></div><script src="player.js?v=DCXOSA1"></script><script src="dcx-player.js?v=DCXOSA1"></script></body></html>
