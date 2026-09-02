@@ -115,6 +115,18 @@ OPH.Realtime = (() => {
     bc?.postMessage({type:"request",requests:obj});
   }
 
+
+  async function publishIdentity(identity){
+    const req={type:"identity",nickname:String(identity?.nickname||"").trim().slice(0,40),playerId:String(identity?.playerId||"").trim().slice(0,32),ts:Date.now()};
+    if(!req.nickname)return;
+    if(mode==="firebase") return db.ref(`rooms/${room}/requests/${uid}/identity`).set(req);
+    if(mode==="ws"){
+      try{return ws.send(JSON.stringify({type:"identity_update",identity:req}))}catch(e){return}
+    }
+    const obj={};obj[uid]={identity:req};
+    bc?.postMessage({type:"request",requests:obj,partial:true});
+  }
+
   async function sendChat(req){
     req.ts = Date.now();
     req.type = "chat";
@@ -166,7 +178,7 @@ OPH.Realtime = (() => {
   }
 
   return {
-    connect,onState,onRequests,setState,patchState,sendRequest,sendChat,clearRequest,clearChat,clearAllChats,
+    connect,onState,onRequests,setState,patchState,sendRequest,sendChat,publishIdentity,clearRequest,clearChat,clearAllChats,
     getMode:()=>mode,getUid:()=>uid,getRoom:()=>room
   };
 })();

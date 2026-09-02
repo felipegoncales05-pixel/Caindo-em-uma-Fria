@@ -47,10 +47,10 @@
       <b>YUMIYA KIRYUIN</b>
       <em><span class="miniDot"></span><span id="yumiyaStatus">CANAL SEGURO</span></em>
     </div>
-    <button class="chatFocusBtn" id="yumiyaFocusBtn" onclick="OPHPlayer.toggleYumiyaFocus()" title="Alternar Focus Mode"><span>⌗</span><b>FOCUS</b></button>
+    <button class="chatFocusBtn" id="yumiyaFocusBtn" onclick="OPHPlayer.toggleYumiyaFocus()" title="Abrir modo Focus"><span>⌗</span><b>ABRIR FOCUS</b></button>
     <button class="chatIconBtn" onclick="OPHPlayer.toggleYumiyaChat(false)" title="Fechar">×</button>
   </header>
-  <div class="yumiyaSystemLine"><span>KIRYUIN RESPONSE INTERFACE // CONSULTAS OPERACIONAIS</span><b id="yumiyaViewMode">COMPACT MODE</b></div>
+  <div class="yumiyaSystemLine"><span id="yumiyaChannelLabel">KIRYUIN RESPONSE INTERFACE // CONSULTAS OPERACIONAIS</span><b id="yumiyaViewMode">MODO: COMPACTO</b></div>
   <div class="yumiyaIdentityGate hidden" id="yumiyaIdentityGate">
     <div class="tag">DCX // IDENTIFICAÇÃO DE OPERADOR</div>
     <h3>IDENTIFIQUE-SE PARA ACESSAR O CANAL</h3>
@@ -59,13 +59,21 @@
     <button class="btn accent" onclick="OPHPlayer.confirmYumiyaIdentity()">CONECTAR AO CANAL</button>
     <small>O narrador verá esta identificação junto das mensagens enviadas.</small>
   </div>
+  <div class="yumiyaRenamePanel hidden" id="yumiyaRenamePanel" role="dialog" aria-modal="true" aria-labelledby="yumiyaRenameTitle">
+    <div class="tag">DCX // IDENTIDADE DO OPERADOR</div>
+    <h3 id="yumiyaRenameTitle">RENOMEAR OPERADOR</h3>
+    <p>Seu ID interno será preservado. O Keymaster passará a ver o novo nome sem perder o encaminhamento direto.</p>
+    <input id="yumiyaRenameInput" maxlength="40" autocomplete="off" placeholder="Novo nome / personagem">
+    <div class="yumiyaRenameActions"><button class="btn" onclick="OPHPlayer.cancelYumiyaRename()">CANCELAR</button><button class="btn accent" onclick="OPHPlayer.confirmYumiyaRename()">SALVAR NOME</button></div>
+    <small>O histórico antigo não é reescrito; novas mensagens usam o novo nome.</small>
+  </div>
   <div class="yumiyaMessages" id="yumiyaMessages"></div>
   <div class="yumiyaProcessing hidden" id="yumiyaProcessing"><i></i><span id="yumiyaProcessingText">PROCESSANDO SOLICITAÇÃO...</span></div>
   <div class="yumiyaComposer" id="yumiyaComposer">
     <textarea id="yumiyaInput" maxlength="700" rows="2" placeholder="Digite uma solicitação operacional..."></textarea>
     <button class="btn accent" onclick="OPHPlayer.sendYumiyaMessage()">ENVIAR</button>
   </div>
-  <div class="yumiyaFoot" id="yumiyaFoot"><span id="yumiyaOperator">OPERADOR // NÃO IDENTIFICADO</span><button class="yumiyaReidentify" onclick="OPHPlayer.changeYumiyaIdentity()">REIDENTIFICAR</button></div>
+  <div class="yumiyaFoot" id="yumiyaFoot"><span id="yumiyaOperator">OPERADOR ATIVO // NÃO IDENTIFICADO</span><button class="yumiyaReidentify" onclick="OPHPlayer.openYumiyaRename()">RENOMEAR OPERADOR</button></div>
 </section>
 
 <div class="eventOverlay" id="eventOverlay"><div class="eventCard"><div class="tag">BROADCAST DO KEYMASTER</div><h2 id="eventTitle"></h2><p id="eventBody"></p><button class="btn" onclick="document.getElementById('eventOverlay').classList.remove('show')">FECHAR</button></div></div><div class="toast" id="toast"></div><script src="player.js"></script></body></html>

@@ -10,7 +10,7 @@
     <div class="actions"><span class="btn" id="chatInboxCount">0 PENDENTES</span><button class="btn red kmNukeBtn" onclick="KM.clearAllChat()">LIMPAR A PORRA TODA</button></div>
   </div>
   <div class="kmAffectPanel">
-    <div class="kmAffectHead"><div><span class="kmFieldLabel">TELEMETRIA EMOCIONAL</span><b>ESTADO DA YUMIYA</b></div><small>Sincronizado com os jogadores</small></div>
+    <div class="kmAffectHead"><div><span class="kmFieldLabel">TELEMETRIA EMOCIONAL // FALLBACK</span><b>ESTADO GLOBAL DA YUMIYA</b></div><small>Usado por quem não possui perfil exclusivo</small></div>
     <div class="kmAffectGrid">
       <div class="kmMoodControl">
         <label for="yumiyaAngerCtl">RAIVA <b id="yumiyaAngerValue">12%</b></label>
@@ -29,6 +29,29 @@
           <button class="btn" data-portrait="anger" onclick="KM.setPortrait('anger')">RAIVA</button>
         </div>
       </div>
+    </div>
+  </div>
+  <div class="kmOperatorProfilePanel">
+    <div class="kmOperatorProfileHead">
+      <div><span class="kmFieldLabel">CANAL INDIVIDUAL</span><b>PERFIL EXCLUSIVO DO OPERADOR</b><small>Portrait e telemetria podem ser diferentes para cada P-ID.</small></div>
+      <span class="kmProfileBadge" id="operatorProfileStatus">SEM OPERADOR</span>
+    </div>
+    <div class="kmOperatorSelectRow">
+      <label class="kmFieldLabel" for="operatorProfileSelect">OPERADOR</label>
+      <select id="operatorProfileSelect" class="kmSelect" onchange="KM.selectOperatorProfile(this.value)"><option value="">SELECIONE UM OPERADOR</option></select>
+      <label class="kmProfileToggle"><input type="checkbox" id="operatorProfileEnabled" onchange="KM.toggleOperatorProfile(this.checked)"><span>ATIVAR OVERRIDE INDIVIDUAL</span></label>
+    </div>
+    <div class="kmOperatorProfileBody" id="operatorProfileBody">
+      <div class="kmProfileSetupGrid">
+        <div><label class="kmFieldLabel" for="operatorPreset">PRESET VISUAL</label><select id="operatorPreset" class="kmSelect" onchange="KM.setOperatorPreset(this.value)"><option value="standard">PADRÃO</option><option value="kang">KANG // PRIVADO</option></select></div>
+        <div><label class="kmFieldLabel" for="operatorTone">TOM INTERPRETATIVO</label><select id="operatorTone" class="kmSelect" onchange="KM.setOperatorTone(this.value)"><option value="professional">PROFISSIONAL</option><option value="warm">CARINHOSA</option><option value="provocative">PROVOCATIVA</option><option value="cold">FRIA</option><option value="hostile">HOSTIL</option></select></div>
+      </div>
+      <div class="kmAffectGrid kmOperatorAffectGrid">
+        <div class="kmMoodControl"><label for="operatorAngerCtl">RAIVA <b id="operatorAngerValue">12%</b></label><input type="range" id="operatorAngerCtl" min="0" max="100" value="12" oninput="KM.previewOperatorMood('anger',this.value)" onchange="KM.setOperatorMood('anger',this.value)"></div>
+        <div class="kmMoodControl"><label for="operatorTensionCtl">TENSÃO <b id="operatorTensionValue">18%</b></label><input type="range" id="operatorTensionCtl" min="0" max="100" value="18" oninput="KM.previewOperatorMood('tension',this.value)" onchange="KM.setOperatorMood('tension',this.value)"></div>
+        <div class="kmPortraitControl"><label>PORTRAIT DESTE OPERADOR</label><div class="kmPortraitButtons" id="operatorPortraitCtl"><button class="btn" data-portrait="normal" onclick="KM.setOperatorPortrait('normal')">NORMAL</button><button class="btn" data-portrait="fear" onclick="KM.setOperatorPortrait('fear')">MEDO</button><button class="btn" data-portrait="embarrassed" onclick="KM.setOperatorPortrait('embarrassed')">ENVERGONHADA</button><button class="btn" data-portrait="anger" onclick="KM.setOperatorPortrait('anger')">RAIVA</button></div></div>
+      </div>
+      <div class="kmProfileFoot"><span id="operatorAssetHint">Preset padrão usa os portraits atuais.</span><button class="btn" onclick="KM.resetOperatorProfile()">RESETAR PARA GLOBAL</button></div>
     </div>
   </div>
   <div class="commsAdminGrid">

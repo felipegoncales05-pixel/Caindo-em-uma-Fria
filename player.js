@@ -28,14 +28,20 @@ window.OPH = window.OPH || {};
     }catch(e){}
     return null;
   }
+  function cleanOperatorName(name){return String(name||"").trim().replace(/\s+/g," ").slice(0,40)}
   function saveYumiyaIdentity(name){
-    name=String(name||"").trim().replace(/\s+/g," ").slice(0,40);
+    name=cleanOperatorName(name);
     if(!name)return null;
-    const identity={name,playerId:makePlayerId(),room,updatedAt:Date.now()};
+    const previous=getYumiyaIdentity();
+    const identity={name,playerId:previous?.playerId||makePlayerId(),room,updatedAt:Date.now()};
     localStorage.setItem(identityKey(),JSON.stringify(identity));
     localStorage.setItem("oph-name",name);
     if($("name"))$("name").value=name;
     return identity;
+  }
+  async function publishYumiyaIdentity(identity=getYumiyaIdentity()){
+    if(!connected||!identity)return;
+    try{await OPH.Realtime.publishIdentity({nickname:identity.name,playerId:identity.playerId})}catch(e){console.warn("Falha ao publicar identidade",e)}
   }
   function ensureYumiyaIdentityFromMainName(){
     let identity=getYumiyaIdentity();
@@ -53,40 +59,78 @@ window.OPH = window.OPH || {};
     composer?.classList.toggle("hidden",missing);
     foot?.classList.toggle("hidden",missing);
     if(missing)processing?.classList.add("hidden");
-    if(identity && $("yumiyaOperator"))$("yumiyaOperator").textContent=`OPERADOR // ${identity.name}`;
+    if(identity && $("yumiyaOperator"))$("yumiyaOperator").textContent=`OPERADOR ATIVO // ${identity.name} // ${identity.playerId}`;
     return !missing;
   }
-  function confirmYumiyaIdentity(){
+  async function confirmYumiyaIdentity(){
     const box=$("yumiyaIdentityInput");
-    const name=(box?.value||"").trim();
+    const name=cleanOperatorName(box?.value||"");
     if(name.length<2){toast("INFORME UM NOME VÁLIDO");box?.focus();return}
-    saveYumiyaIdentity(name);
+    const identity=saveYumiyaIdentity(name);
     if(box)box.value="";
     renderYumiya();
+    await publishYumiyaIdentity(identity);
     toast("OPERADOR IDENTIFICADO");
     requestAnimationFrame(()=>$("yumiyaInput")?.focus());
   }
-  function changeYumiyaIdentity(){
-    const current=getYumiyaIdentity();
-    localStorage.removeItem(identityKey());
-    renderIdentityGate();
-    if($("yumiyaIdentityInput")){$("yumiyaIdentityInput").value=current?.name||"";$("yumiyaIdentityInput").focus()}
+  function openYumiyaRename(){
+    const identity=ensureYumiyaIdentityFromMainName();
+    if(!identity){renderIdentityGate();$("yumiyaIdentityInput")?.focus();return}
+    const panel=$("yumiyaRenamePanel"),box=$("yumiyaRenameInput");
+    if(panel)panel.classList.remove("hidden");
+    if(box){box.value=identity.name;requestAnimationFrame(()=>{box.focus();box.select()})}
   }
-  const portraitFiles={
-    normal:["yumiya-normal.png","yumiya-portrait.png"],
-    fear:["yumiya-medo.png"],
-    embarrassed:["yumiya-envergonhada.png"],
-    anger:["yumiya-raiva.png"]
-  };
+  function cancelYumiyaRename(){
+    $("yumiyaRenamePanel")?.classList.add("hidden");
+    $("yumiyaInput")?.focus();
+  }
+  async function confirmYumiyaRename(){
+    const box=$("yumiyaRenameInput"),current=getYumiyaIdentity();
+    const name=cleanOperatorName(box?.value||"");
+    if(name.length<2){toast("INFORME UM NOME VÁLIDO");box?.focus();return}
+    if(current?.name===name){cancelYumiyaRename();toast("NOME JÁ ESTÁ EM USO");return}
+    const identity=saveYumiyaIdentity(name);
+    $("yumiyaRenamePanel")?.classList.add("hidden");
+    renderYumiya();
+    await publishYumiyaIdentity(identity);
+    toast("OPERADOR RENOMEADO // "+name.toUpperCase());
+  }
+  function changeYumiyaIdentity(){openYumiyaRename()}
+  const portraitMoodFiles={normal:"normal",fear:"medo",embarrassed:"envergonhada",anger:"raiva"};
   let loadedPortraitKey="";
+  function operatorProfile(){
+    const identity=getYumiyaIdentity();
+    if(!identity?.playerId)return null;
+    const profile=state.comms?.operatorProfiles?.[identity.playerId];
+    return profile?.enabled?profile:null;
+  }
+  function effectiveAffect(){
+    const base=Object.assign({anger:12,tension:18,portrait:"normal"},state.comms?.affect||{});
+    const profile=operatorProfile();
+    if(!profile)return Object.assign(base,{preset:"standard",tone:"professional",exclusive:false});
+    return {
+      anger:profile.anger ?? base.anger,
+      tension:profile.tension ?? base.tension,
+      portrait:profile.portrait || base.portrait || "normal",
+      preset:profile.preset || "standard",
+      tone:profile.tone || "professional",
+      exclusive:true
+    };
+  }
   function setupYumiyaPortrait(){renderYumiyaAffect()}
   function moodWord(v){return v<25?"BAIXA":v<55?"ELEVADA":v<80?"ALTA":"CRÍTICA"}
-  function loadPortraitFor(key){
+  function loadPortraitFor(key,preset="standard"){
     const portrait=$("yumiyaFocusPortrait");if(!portrait)return;
-    key=portraitFiles[key]?key:"normal";
-    if(loadedPortraitKey===key)return;
-    loadedPortraitKey=key;
-    const candidates=[...(portraitFiles[key]||portraitFiles.normal)];
+    key=portraitMoodFiles[key]?key:"normal";
+    preset=String(preset||"standard").toLowerCase().replace(/[^a-z0-9_-]/g,"")||"standard";
+    const loadKey=preset+":"+key;
+    if(loadedPortraitKey===loadKey)return;
+    loadedPortraitKey=loadKey;
+    const mood=portraitMoodFiles[key];
+    const candidates=[];
+    if(preset!=="standard")candidates.push(`yumiya-${preset}-${mood}.png`);
+    candidates.push(`yumiya-${mood}.png`);
+    if(key==="normal")candidates.push("yumiya-portrait.png");
     const tryNext=()=>{
       const src=candidates.shift();
       if(!src){portrait.classList.remove("hasPortrait");portrait.style.removeProperty("--yumiyaPortrait");return}
@@ -98,7 +142,7 @@ window.OPH = window.OPH || {};
     tryNext();
   }
   function renderYumiyaAffect(){
-    const a=state.comms?.affect||{anger:12,tension:18,portrait:"normal"};
+    const a=effectiveAffect();
     const anger=Math.max(0,Math.min(100,Math.round(Number(a.anger)||0)));
     const tension=Math.max(0,Math.min(100,Math.round(Number(a.tension)||0)));
     if($("yumiyaAngerBar"))$("yumiyaAngerBar").style.width=anger+"%";
@@ -111,7 +155,15 @@ window.OPH = window.OPH || {};
       portrait.classList.toggle("affectAngerHigh",anger>=70);
       portrait.classList.toggle("affectTensionHigh",tension>=70);
     }
-    loadPortraitFor(a.portrait||"normal");
+    loadPortraitFor(a.portrait||"normal",a.preset||"standard");
+    const identity=getYumiyaIdentity();
+    const label=$("yumiyaChannelLabel");
+    if(label)label.textContent=a.exclusive&&identity?`CANAL INDIVIDUAL // ${identity.name.toUpperCase()}`:"KIRYUIN RESPONSE INTERFACE // CONSULTAS OPERACIONAIS";
+    const chat=$("yumiyaChat");
+    if(chat){
+      chat.dataset.tone=a.tone||"professional";
+      chat.classList.toggle("operatorExclusive",!!a.exclusive);
+    }
   }
   function applyYumiyaFocus(){
     const chat=$("yumiyaChat"), backdrop=$("yumiyaFocusBackdrop"), btn=$("yumiyaFocusBtn"), mode=$("yumiyaViewMode");
@@ -119,8 +171,8 @@ window.OPH = window.OPH || {};
     chat.classList.toggle("focus",focusMode);
     backdrop?.classList.toggle("hidden",!focusMode || !chatOpen);
     document.body.classList.toggle("yumiyaFocusActive",focusMode && chatOpen);
-    if(btn){btn.classList.toggle("active",focusMode);btn.querySelector("b").textContent=focusMode?"COMPACT":"FOCUS"}
-    if(mode)mode.textContent=focusMode?"FOCUS MODE":"COMPACT MODE";
+    if(btn){btn.classList.toggle("active",focusMode);btn.querySelector("b").textContent=focusMode?"VOLTAR AO COMPACTO":"ABRIR FOCUS"}
+    if(mode)mode.textContent=focusMode?"MODO: FOCUS":"MODO: COMPACTO";
   }
   function toggleYumiyaFocus(force){
     focusMode=typeof force==="boolean"?force:!focusMode;
@@ -152,7 +204,8 @@ window.OPH = window.OPH || {};
       comms:Object.assign(d.comms,s?.comms||{}, {
         messages:Array.isArray(s?.comms?.messages)?s.comms.messages:[],
         processing:Object.assign(d.comms.processing,s?.comms?.processing||{}),
-        affect:Object.assign(d.comms.affect,s?.comms?.affect||{})
+        affect:Object.assign(d.comms.affect,s?.comms?.affect||{}),
+        operatorProfiles:Object.assign({},d.comms.operatorProfiles||{},s?.comms?.operatorProfiles||{})
       })
     });
   }
@@ -234,7 +287,7 @@ window.OPH = window.OPH || {};
     if(localKept.length!==localRaw.length)saveLocalOutgoing(localKept);
     const local=localKept.map(m=>Object.assign({source:"player"},m));
     const merged=[
-      {id:"system-welcome",source:"system",ts:0,text:"Canal remoto inicializado. Envie uma solicitação operacional quando necessário."},
+      {id:"system-welcome",source:"system",ts:0,text:"Canal remoto inicializado. Você pode enviar uma solicitação operacional para a Yumiya quando necessário."},
       ...local,
       ...remote.map(m=>Object.assign({source:"yumiya"},m))
     ].sort((a,b)=>(a.ts||0)-(b.ts||0));
@@ -316,20 +369,27 @@ window.OPH = window.OPH || {};
   function switchTab(tab){document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));$(tab).classList.add("active")}
   async function connect(){
     room=$("room").value.trim().toUpperCase()||"FRIA-01";localStorage.setItem("oph-room",room);history.replaceState(null,"",`?room=${encodeURIComponent(room)}`);
+    const typedName=cleanOperatorName($("name")?.value||"");
+    if(typedName){
+      const current=getYumiyaIdentity();
+      if(!current||current.name!==typedName)saveYumiyaIdentity(typedName);
+    }
     try{
       const r=await OPH.Realtime.connect({roomId:room,asHost:false});connected=true;playerUid=r.uid||OPH.Realtime.getUid();
-      $("conn").classList.add("on");$("mode").textContent=r.mode.toUpperCase();toast("CONECTADO À SALA "+room);renderYumiya()
+      $("conn").classList.add("on");$("mode").textContent=r.mode.toUpperCase();await publishYumiyaIdentity();toast("CONECTADO À SALA "+room);renderYumiya()
     }
     catch(e){toast("FALHA AO CONECTAR");console.error(e)}
   }
   OPH.Realtime.onState(s=>{state=mergeDefaults(s);render()});
-  window.OPHPlayer={go,submitKey,switchTab,connect,toggleYumiyaChat,toggleYumiyaFocus,sendYumiyaMessage,confirmYumiyaIdentity,changeYumiyaIdentity};
+  window.OPHPlayer={go,submitKey,switchTab,connect,toggleYumiyaChat,toggleYumiyaFocus,sendYumiyaMessage,confirmYumiyaIdentity,changeYumiyaIdentity,openYumiyaRename,cancelYumiyaRename,confirmYumiyaRename};
   window.addEventListener("DOMContentLoaded",()=>{
     $("room").value=room;$("name").value=localStorage.getItem("oph-name")||"";
     $("name").oninput=()=>localStorage.setItem("oph-name",$("name").value);
+    $("name").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();connect()}});
     $("yumiyaInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendYumiyaMessage()}});
     $("yumiyaIdentityInput").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();confirmYumiyaIdentity()}});
-    document.addEventListener("keydown",e=>{if(e.key==="Escape"&&focusMode){e.preventDefault();toggleYumiyaFocus(false)}});
+    $("yumiyaRenameInput")?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();confirmYumiyaRename()}else if(e.key==="Escape"){e.preventDefault();cancelYumiyaRename()}});
+    document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("yumiyaRenamePanel")?.classList.contains("hidden")){e.preventDefault();cancelYumiyaRename();return}if(e.key==="Escape"&&focusMode){e.preventDefault();toggleYumiyaFocus(false)}});
     setupYumiyaPortrait();applyYumiyaFocus();
     connect();render()
   });

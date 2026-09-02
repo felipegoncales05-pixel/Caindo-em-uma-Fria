@@ -1,6 +1,6 @@
 window.OPH = window.OPH || {};
 (() => {
-  let state=OPH.cloneDefault(),room=new URLSearchParams(location.search).get("room")||window.OPH_CONFIG.defaultRoom||"FRIA-01",requests={},selectedChat=null;
+  let state=OPH.cloneDefault(),room=new URLSearchParams(location.search).get("room")||window.OPH_CONFIG.defaultRoom||"FRIA-01",requests={},selectedChat=null,selectedProfileUid="";
   const $=id=>document.getElementById(id);
   function toast(t){const e=$("toast");e.textContent=t;e.classList.add("show");setTimeout(()=>e.classList.remove("show"),1600)}
   function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
@@ -12,9 +12,21 @@ window.OPH = window.OPH || {};
   function saveContacts(obj){localStorage.setItem(contactsKey(),JSON.stringify(obj))}
   function rememberContacts(inbox){
     const contacts=getContacts();let changed=false;
-    inbox.forEach(({uid,msg})=>{
+    const seen=[];
+    inbox.forEach(({uid,msg})=>seen.push({uid,msg}));
+    for(const [uid,node] of Object.entries(requests||{})){
+      const identity=node?.identity;
+      if(identity?.nickname)seen.push({uid,msg:{nickname:identity.nickname,playerId:identity.playerId||"",ts:identity.ts||Date.now()}});
+    }
+    seen.forEach(({uid,msg})=>{
+      const pid=msg.playerId||"";
+      if(pid){
+        for(const [oldUid,old] of Object.entries(contacts)){
+          if(oldUid!==uid&&old?.playerId===pid){delete contacts[oldUid];changed=true}
+        }
+      }
       const prev=contacts[uid]||{};
-      const next={uid,name:msg.nickname||prev.name||uid.slice(0,8),playerId:msg.playerId||prev.playerId||"",lastSeen:Math.max(+prev.lastSeen||0,+msg.ts||Date.now())};
+      const next={uid,name:msg.nickname||prev.name||uid.slice(0,8),playerId:pid||prev.playerId||"",lastSeen:Math.max(+prev.lastSeen||0,+msg.ts||Date.now())};
       if(JSON.stringify(prev)!==JSON.stringify(next)){contacts[uid]=next;changed=true}
     });
     if(changed)saveContacts(contacts);
@@ -46,7 +58,8 @@ window.OPH = window.OPH || {};
       comms:Object.assign(d.comms,s?.comms||{}, {
         messages:Array.isArray(s?.comms?.messages)?s.comms.messages:[],
         processing:Object.assign(d.comms.processing,s?.comms?.processing||{}),
-        affect:Object.assign(d.comms.affect,s?.comms?.affect||{})
+        affect:Object.assign(d.comms.affect,s?.comms?.affect||{}),
+        operatorProfiles:Object.assign({},d.comms.operatorProfiles||{},s?.comms?.operatorProfiles||{})
       })
     })
   }
@@ -148,10 +161,77 @@ window.OPH = window.OPH || {};
     await save();
     toast("PORTRAIT // "+portrait.toUpperCase());
   }
+  function selectedProfileContact(){
+    const contacts=getContacts();
+    if(selectedProfileUid&&contacts[selectedProfileUid])return contacts[selectedProfileUid];
+    return null;
+  }
+  function profileKey(contact){return contact?.playerId||""}
+  function defaultOperatorProfile(contact){
+    const base=state.comms.affect||{anger:12,tension:18,portrait:"normal"};
+    const isKang=/^kang(?:\s|$)/i.test(contact?.name||"");
+    return {enabled:true,preset:isKang?"kang":"standard",tone:isKang?"provocative":"professional",anger:clampMood(base.anger),tension:clampMood(base.tension),portrait:base.portrait||"normal",updatedAt:Date.now()};
+  }
+  function getOperatorProfile(contact,create=false){
+    const key=profileKey(contact);if(!key)return null;
+    state.comms.operatorProfiles=state.comms.operatorProfiles||{};
+    if(!state.comms.operatorProfiles[key]&&create)state.comms.operatorProfiles[key]=defaultOperatorProfile(contact);
+    return state.comms.operatorProfiles[key]||null;
+  }
+  function renderOperatorProfiles(){
+    const select=$("operatorProfileSelect");if(!select)return;
+    const contacts=getContacts();
+    const current=selectedProfileUid||select.value||"";
+    const sorted=Object.values(contacts).filter(c=>c.playerId).sort((a,b)=>(+b.lastSeen||0)-(+a.lastSeen||0));
+    select.innerHTML=`<option value="">SELECIONE UM OPERADOR</option>`+sorted.map(c=>`<option value="${esc(c.uid)}">${esc(c.name)} // ${esc(c.playerId)}</option>`).join("");
+    if(sorted.some(c=>c.uid===current)){select.value=current;selectedProfileUid=current}else if(current){selectedProfileUid=""}
+    const contact=selectedProfileContact();
+    const body=$("operatorProfileBody"),enabled=$("operatorProfileEnabled"),status=$("operatorProfileStatus");
+    if(!contact){
+      body?.classList.add("disabled");if(enabled){enabled.checked=false;enabled.disabled=true}if(status){status.textContent="SEM OPERADOR";status.classList.remove("active")};return;
+    }
+    if(enabled)enabled.disabled=false;
+    const p=getOperatorProfile(contact,false);
+    const active=!!p?.enabled;
+    if(enabled)enabled.checked=active;
+    body?.classList.toggle("disabled",!active);
+    if(status){status.textContent=active?`EXCLUSIVO // ${contact.name}`:`GLOBAL // ${contact.name}`;status.classList.toggle("active",active)}
+    const base=state.comms.affect||{anger:12,tension:18,portrait:"normal"};
+    const view=Object.assign({preset:"standard",tone:"professional",anger:base.anger,tension:base.tension,portrait:base.portrait||"normal"},p||{});
+    if($("operatorPreset"))$("operatorPreset").value=["standard","kang"].includes(view.preset)?view.preset:"standard";
+    if($("operatorTone"))$("operatorTone").value=["professional","warm","provocative","cold","hostile"].includes(view.tone)?view.tone:"professional";
+    const anger=clampMood(view.anger),tension=clampMood(view.tension);
+    if($("operatorAngerCtl"))$("operatorAngerCtl").value=anger;if($("operatorTensionCtl"))$("operatorTensionCtl").value=tension;
+    if($("operatorAngerValue"))$("operatorAngerValue").textContent=anger+"%";if($("operatorTensionValue"))$("operatorTensionValue").textContent=tension+"%";
+    document.querySelectorAll("#operatorPortraitCtl [data-portrait]").forEach(b=>b.classList.toggle("gold",b.dataset.portrait===(view.portrait||"normal")));
+    if($("operatorAssetHint"))$("operatorAssetHint").textContent=view.preset==="kang"?"Kang procura yumiya-kang-normal/medo/envergonhada/raiva.png e cai nos portraits padrão se não encontrar.":"Preset padrão usa os quatro portraits atuais da Yumiya.";
+  }
+  function selectOperatorProfile(uid){selectedProfileUid=uid||"";renderOperatorProfiles()}
+  async function toggleOperatorProfile(on){
+    const contact=selectedProfileContact();if(!contact){toast("SELECIONE UM OPERADOR");return}
+    const key=profileKey(contact);if(!key){toast("OPERADOR SEM P-ID");return}
+    const p=getOperatorProfile(contact,true);p.enabled=!!on;p.updatedAt=Date.now();await save();toast(on?"PERFIL INDIVIDUAL ATIVADO":"OPERADOR VOLTOU AO GLOBAL");
+  }
+  function previewOperatorMood(kind,value){const v=clampMood(value),out=$(kind==="anger"?"operatorAngerValue":"operatorTensionValue");if(out)out.textContent=v+"%"}
+  async function setOperatorMood(kind,value){
+    if(!["anger","tension"].includes(kind))return;const contact=selectedProfileContact();if(!contact)return;const p=getOperatorProfile(contact,true);p.enabled=true;p[kind]=clampMood(value);p.updatedAt=Date.now();await save();
+  }
+  async function setOperatorPortrait(portrait){
+    if(!["normal","fear","embarrassed","anger"].includes(portrait))return;const contact=selectedProfileContact();if(!contact)return;const p=getOperatorProfile(contact,true);p.enabled=true;p.portrait=portrait;p.updatedAt=Date.now();await save();toast(`PORTRAIT INDIVIDUAL // ${contact.name.toUpperCase()}`);
+  }
+  async function setOperatorPreset(preset){
+    if(!["standard","kang"].includes(preset))return;const contact=selectedProfileContact();if(!contact)return;const p=getOperatorProfile(contact,true);p.enabled=true;p.preset=preset;p.updatedAt=Date.now();if(preset==="kang"&&p.tone==="professional")p.tone="provocative";await save();toast(`PRESET // ${preset.toUpperCase()}`);
+  }
+  async function setOperatorTone(tone){
+    if(!["professional","warm","provocative","cold","hostile"].includes(tone))return;const contact=selectedProfileContact();if(!contact)return;const p=getOperatorProfile(contact,true);p.enabled=true;p.tone=tone;p.updatedAt=Date.now();await save();toast(`TOM // ${tone.toUpperCase()}`);
+  }
+  async function resetOperatorProfile(){
+    const contact=selectedProfileContact();if(!contact)return;const key=profileKey(contact);if(!key)return;state.comms.operatorProfiles=state.comms.operatorProfiles||{};delete state.comms.operatorProfiles[key];await save();toast(`${contact.name.toUpperCase()} // PERFIL GLOBAL`);
+  }
   function renderEvents(){
     $("emLevel").value=state.emergency.level||0;$("emLevelLabel").textContent=OPH.EMERGENCY_STATES[state.emergency.level||0].title;
   }
-  function render(){renderVisibility();renderApproaches();renderPreps();renderClues();renderRequests();renderChat();renderAffect();renderEvents();$("roomLabel").textContent=room;$("playerUrl").value=location.origin+location.pathname.replace(/keymaster\.html$/,"")+`?room=${encodeURIComponent(room)}`}
+  function render(){renderVisibility();renderApproaches();renderPreps();renderClues();renderRequests();renderChat();renderOperatorProfiles();renderAffect();renderOperatorProfiles();renderEvents();$("roomLabel").textContent=room;$("playerUrl").value=location.origin+location.pathname.replace(/keymaster\.html$/,"")+`?room=${encodeURIComponent(room)}`}
   async function connect(){
     room=$("room").value.trim().toUpperCase()||"FRIA-01";history.replaceState(null,"",`?room=${encodeURIComponent(room)}`);
     const fb=window.OPH_CONFIG?.firebase?.enabled;
@@ -167,6 +247,7 @@ window.OPH = window.OPH || {};
       const contacts=rememberContacts([item]);
       renderChat();
       $("chatTarget").value=uid;
+      selectedProfileUid=uid;renderOperatorProfiles();
       $("chatReply").placeholder=`Responder a ${item.msg.nickname||"jogador"}...`;
     }
     state.comms.processing={active:true,targetUid:uid,label:"PROCESSANDO SOLICITAÇÃO...",until:Date.now()+90000};
@@ -261,12 +342,28 @@ window.OPH = window.OPH || {};
     previewMood,
     setMood,
     setPortrait,
+    selectOperatorProfile,
+    toggleOperatorProfile,
+    previewOperatorMood,
+    setOperatorMood,
+    setOperatorPortrait,
+    setOperatorPreset,
+    setOperatorTone,
+    resetOperatorProfile,
     processing:async()=>{
       state.comms.processing={active:true,targetUid:$("chatTarget").value||"all",label:"PROCESSANDO SOLICITAÇÃO...",until:Date.now()+90000};
       await save()
     },
     stopProcessing:async()=>{state.comms.processing={active:false,targetUid:"all",label:"PROCESSANDO SOLICITAÇÃO...",until:0};await save()}
   };
-  OPH.Realtime.onState(s=>{state=merge(s);render()});OPH.Realtime.onRequests(r=>{requests=r;renderRequests();renderChat()});
-  window.addEventListener("DOMContentLoaded",()=>{$("room").value=room;$("firebaseLogin").classList.toggle("hidden",!window.OPH_CONFIG?.firebase?.enabled);$("localLogin").classList.toggle("hidden",!!window.OPH_CONFIG?.firebase?.enabled);$("chatReply").addEventListener("keydown",e=>{if(e.key==="Enter"&&e.ctrlKey){e.preventDefault();sendComms()}});render()});
+  OPH.Realtime.onState(s=>{state=merge(s);render()});OPH.Realtime.onRequests(r=>{
+    if(OPH.Realtime.getMode()==="firebase")requests=r||{};
+    else{
+      const merged=Object.assign({},requests);
+      for(const [uid,node] of Object.entries(r||{}))merged[uid]=Object.assign({},merged[uid]||{},node||{});
+      requests=merged;
+    }
+    renderRequests();renderChat();renderOperatorProfiles()
+  });
+  window.addEventListener("DOMContentLoaded",()=>{$("room").value=room;$("firebaseLogin").classList.toggle("hidden",!window.OPH_CONFIG?.firebase?.enabled);$("localLogin").classList.toggle("hidden",!!window.OPH_CONFIG?.firebase?.enabled);$("chatReply").addEventListener("keydown",e=>{if(e.key==="Enter"&&e.ctrlKey){e.preventDefault();sendComms()}});$("chatTarget")?.addEventListener("change",e=>{if(e.target.value!=="all"){selectedProfileUid=e.target.value;renderOperatorProfiles()}});render()});
 })();
