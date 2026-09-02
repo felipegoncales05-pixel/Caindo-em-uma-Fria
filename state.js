@@ -1,6 +1,6 @@
 window.OPH = window.OPH || {};
 OPH.DEFAULT_STATE = {
-  version: 6,
+  version: 7,
   focusStage: 0,
   visible: {
     government: true,
@@ -10,7 +10,8 @@ OPH.DEFAULT_STATE = {
     n02: true,
     protocol: true,
     emergencySim: true,
-    family: false
+    family: false,
+    comms: false
   },
   approaches: {
     assault: true,
@@ -29,6 +30,10 @@ OPH.DEFAULT_STATE = {
     family: false
   },
   emergency: { level:0, active:false },
+  comms: {
+    messages: [],
+    processing: { active:false, targetUid:"all", label:"PROCESSANDO SOLICITAÇÃO...", until:0 }
+  },
   event: null,
   updatedAt: Date.now()
 };

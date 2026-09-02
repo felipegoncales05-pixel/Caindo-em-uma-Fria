@@ -13,4 +13,40 @@
 <section class="view" data-stage="5"><div class="eyebrow">RAIN // ARQUIVO BIOLÓGICO</div><h2 class="title">N-02</h2><div class="n02"><div class="specimen" id="specimen"><div class="specLabel">N-02 // BIOLOGICAL COUNTERMEASURE</div><img src="n02.png"><div class="mask"></div></div><div><div class="card"><div class="tag">DECODIFICAÇÃO</div><h3><span id="clueCount">0/5</span> fragmentos</h3><div class="progress"><i id="clueBar"></i></div><div class="decrypt"><input id="keyInput" placeholder="KEYMASTER DO FRAGMENTO"><button class="btn accent" onclick="OPHPlayer.submitKey()">DECODIFICAR</button></div></div><div class="tabs"><button class="tab active" data-tab="intel" onclick="OPHPlayer.switchTab('intel')">INTEL / PISTAS</button><button class="tab" data-tab="abilities" onclick="OPHPlayer.switchTab('abilities')">CAPACIDADES CONFIRMADAS</button><button class="tab" data-tab="profile" onclick="OPHPlayer.switchTab('profile')">PERFIL</button></div><div class="panel active" id="intel"><div id="fragments"></div></div><div class="panel" id="abilities"><div id="abilities"></div></div><div class="panel" id="profile"></div><div class="card hidden" id="family" style="margin-top:10px"><div class="tag">EQUIPE DESIGNADA</div><h3>REINA'S FAMILY</h3><p>Reina: leitura biológica. Kang: contenção. Nadeko: suporte médico. Grace: acesso e genética.</p></div></div></div></section>
 <section class="view" data-stage="6"><div class="eyebrow">PROTOCOLO</div><h2 class="title">SE H-01 ACORDAR,<br>O GOLPE ACABOU.</h2><div class="card"><h3>Prioridade muda.</h3><p>Interromper escalada, evacuar civis, abrir distância, tentar comunicação/recontenção e assumir que usuários afetados podem ficar temporariamente sem energia.</p></div></section>
 </main></div>
+
+<div class="yumiyaLauncher hidden" id="yumiyaLauncher">
+  <button class="yumiyaLaunchBtn" id="yumiyaLaunchBtn" onclick="OPHPlayer.toggleYumiyaChat()">
+    <span class="yumiyaLaunchMark">YK</span>
+    <span><b>YUMIYA // REMOTE</b><small id="yumiyaLaunchStatus">CANAL DISPONÍVEL</small></span>
+    <i id="yumiyaUnread" class="hidden">0</i>
+  </button>
+</div>
+<section class="yumiyaChat hidden" id="yumiyaChat" aria-label="Yumiya Remote Assist">
+  <header class="yumiyaChatHead">
+    <div class="yumiyaAvatar"><span>YK</span></div>
+    <div class="yumiyaIdentity">
+      <small>DCX // ASSISTÊNCIA REMOTA</small>
+      <b>YUMIYA KIRYUIN</b>
+      <em><span class="miniDot"></span><span id="yumiyaStatus">CANAL SEGURO</span></em>
+    </div>
+    <button class="chatIconBtn" onclick="OPHPlayer.toggleYumiyaChat(false)" title="Fechar">×</button>
+  </header>
+  <div class="yumiyaSystemLine">KIRYUIN RESPONSE INTERFACE // CONSULTAS OPERACIONAIS</div>
+  <div class="yumiyaIdentityGate hidden" id="yumiyaIdentityGate">
+    <div class="tag">DCX // IDENTIFICAÇÃO DE OPERADOR</div>
+    <h3>IDENTIFIQUE-SE PARA ACESSAR O CANAL</h3>
+    <p>A identificação fica vinculada a este dispositivo durante a operação.</p>
+    <input id="yumiyaIdentityInput" maxlength="40" autocomplete="off" placeholder="Nome / personagem">
+    <button class="btn accent" onclick="OPHPlayer.confirmYumiyaIdentity()">CONECTAR AO CANAL</button>
+    <small>O narrador verá esta identificação junto das mensagens enviadas.</small>
+  </div>
+  <div class="yumiyaMessages" id="yumiyaMessages"></div>
+  <div class="yumiyaProcessing hidden" id="yumiyaProcessing"><i></i><span id="yumiyaProcessingText">PROCESSANDO SOLICITAÇÃO...</span></div>
+  <div class="yumiyaComposer" id="yumiyaComposer">
+    <textarea id="yumiyaInput" maxlength="700" rows="2" placeholder="Digite uma solicitação operacional..."></textarea>
+    <button class="btn accent" onclick="OPHPlayer.sendYumiyaMessage()">ENVIAR</button>
+  </div>
+  <div class="yumiyaFoot" id="yumiyaFoot"><span id="yumiyaOperator">OPERADOR // NÃO IDENTIFICADO</span><button class="yumiyaReidentify" onclick="OPHPlayer.changeYumiyaIdentity()">REIDENTIFICAR</button></div>
+</section>
+
 <div class="eventOverlay" id="eventOverlay"><div class="eventCard"><div class="tag">BROADCAST DO KEYMASTER</div><h2 id="eventTitle"></h2><p id="eventBody"></p><button class="btn" onclick="document.getElementById('eventOverlay').classList.remove('show')">FECHAR</button></div></div><div class="toast" id="toast"></div><script src="player.js"></script></body></html>
