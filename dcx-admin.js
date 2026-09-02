@@ -1,6 +1,6 @@
 window.DCX = window.DCX || {};
 (() => {
-  const BUILD = "DCX-OS-A1";
+  const BUILD = "DCX-OS-A2-RECOVERY";
   const ADMIN_UID = "1uVVp67PW7c53fs6dstTDNE46Nz1";
   const $ = id => document.getElementById(id);
   const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -9,274 +9,115 @@ window.DCX = window.DCX || {};
   const commsStatuses = ["ONLINE","SINAL FRACO","SEM COMUNICAÇÃO"];
 
   let room = new URLSearchParams(location.search).get("room") || window.OPH_CONFIG?.defaultRoom || "FRIA-01";
-  let db = null, auth = null, base = null;
-  let operators = {}, teams = {}, presence = {}, requests = {};
-  let selectedOperator = "";
-  let activeTab = sessionStorage.getItem("dcx-km-tab") || "master";
-  let initialized = false;
-  let refs = [];
+  let db=null, auth=null, base="", initialized=false;
+  let operators={}, teams={}, presence={}, requests={}, accessPublic={}, invitations={}, claims={}, notes={};
+  let selectedOperator="", selectedNotesPlayer="", selectedNote="";
+  let activeTab=sessionStorage.getItem("dcx-km-tab")||"master";
+  let refs=[], renderQueued=false, pendingRender=false, heartbeatInterval=null, requestsSyncTimer=null;
 
-  function toast(text){
-    const e=$("toast"); if(!e) return;
-    e.textContent=text; e.classList.add("show"); setTimeout(()=>e.classList.remove("show"),1800);
-  }
-  function cleanName(v){ return String(v||"").trim().replace(/\s+/g," ").slice(0,48); }
-  function safeId(prefix="ID"){
-    const raw=(crypto.randomUUID?.() || Math.random().toString(36).slice(2)+Date.now().toString(36)).replace(/-/g,"").slice(0,10).toUpperCase();
-    return `${prefix}-${raw}`;
-  }
-  function now(){ return firebase.database.ServerValue.TIMESTAMP; }
-  function path(p=""){ return `${base}${p?"/"+p:""}`; }
-  function ref(p=""){ return db.ref(path(p)); }
-  function fmtAgo(ts){
-    ts=Number(ts)||0; if(!ts) return "SEM SINAL";
-    const s=Math.max(0,Math.floor((Date.now()-ts)/1000));
-    if(s<5)return "AGORA"; if(s<60)return `HÁ ${s}s`; const m=Math.floor(s/60); if(m<60)return `HÁ ${m}min`; return `HÁ ${Math.floor(m/60)}h`;
-  }
-  function presenceState(p){
-    if(!p?.lastSeen)return {label:"OFFLINE",cls:"offline"};
-    const age=Date.now()-Number(p.lastSeen||0);
-    if(age>90000)return {label:"OFFLINE",cls:"offline"};
-    if(p.visibility==="hidden")return {label:"OUTRA GUIA / MINIMIZADO",cls:"hiddenTab"};
-    if(p.focused===false)return {label:"SEM FOCO",cls:"away"};
-    if(age>45000)return {label:"INATIVO",cls:"away"};
-    return {label:"ATIVO",cls:"online"};
-  }
-  function optionList(values,current){return values.map(v=>`<option value="${esc(v)}" ${v===current?"selected":""}>${esc(v)}</option>`).join("")}
-  function teamName(id){return teams?.[id]?.name || (id?"EQUIPE DESCONHECIDA":"SEM EQUIPE")}
-  function operatorName(op,id){return op?.identity?.name || op?.name || id}
-  function operatorType(op,id){return op?.identity?.type || (String(id).startsWith("NPC-")?"npc":"player")}
+  function toast(text){const e=$("toast");if(!e)return;e.textContent=text;e.classList.add("show");setTimeout(()=>e.classList.remove("show"),1900)}
+  function clean(v,max=48){return String(v||"").trim().replace(/\s+/g," ").slice(0,max)}
+  function safeId(prefix="ID"){const raw=(crypto.randomUUID?.()||Math.random().toString(36).slice(2)+Date.now().toString(36)).replace(/-/g,"").slice(0,10).toUpperCase();return `${prefix}-${raw}`}
+  function keyCode(v=""){return String(v||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,12).replace(/(.{4})(?=.)/g,"$1-")}
+  function randomKey(){const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let s="";crypto.getRandomValues?.(new Uint32Array(8)).forEach(n=>s+=chars[n%chars.length]);if(!s){for(let i=0;i<8;i++)s+=chars[Math.floor(Math.random()*chars.length)]}return `${s.slice(0,4)}-${s.slice(4,8)}`}
+  function now(){return firebase.database.ServerValue.TIMESTAMP}
+  function path(p=""){return `${base}${p?"/"+p:""}`}
+  function ref(p=""){if(!db)throw new Error("DCX OS ainda não inicializado");return db.ref(path(p))}
   function narrative(op){return Object.assign({teamId:"",role:"",status:"OPERACIONAL",location:"",commsStatus:"ONLINE",visible:true},op?.narrative||{})}
+  function operatorName(op,id){return op?.identity?.name||op?.name||id}
+  function operatorType(op,id){return op?.identity?.type||(String(id).startsWith("NPC-")?"npc":"player")}
   function operatorEntries(){return Object.entries(operators||{}).filter(([id])=>id!=="_init")}
+  function teamName(id){return teams?.[id]?.name||(id?"EQUIPE DESCONHECIDA":"SEM EQUIPE")}
+  function fmtAgo(ts){ts=Number(ts)||0;if(!ts)return"SEM SINAL";const s=Math.max(0,Math.floor((Date.now()-ts)/1000));if(s<5)return"AGORA";if(s<60)return`HÁ ${s}s`;const m=Math.floor(s/60);if(m<60)return`HÁ ${m}min`;return`HÁ ${Math.floor(m/60)}h`}
+  function presenceState(p){if(!p?.lastSeen)return{label:"OFFLINE",cls:"offline"};const age=Date.now()-Number(p.lastSeen||0);if(age>90000)return{label:"OFFLINE",cls:"offline"};if(p.visibility==="hidden")return{label:"OUTRA GUIA / MINIMIZADO",cls:"hiddenTab"};if(p.focused===false)return{label:"SEM FOCO",cls:"away"};if(age>45000)return{label:"INATIVO",cls:"away"};return{label:"ATIVO",cls:"online"}}
+  function options(vals,current){return vals.map(v=>`<option value="${esc(v)}" ${v===current?"selected":""}>${esc(v)}</option>`).join("")}
+  function ready(){if(!initialized||!db){toast("DCX OS // AGUARDE A SINCRONIZAÇÃO");return false}return true}
+  function adminUser(){return auth?.currentUser?.uid===ADMIN_UID}
 
-  async function log(type, text, data={}){
-    try{
-      const r=ref("eventLog").push();
-      await r.set({type,text,data,ts:now(),by:"KEYMASTER",build:BUILD});
-    }catch(e){console.warn("EventLog",e)}
-  }
+  function isEditing(){const a=document.activeElement;if(!a)return false;return !!a.closest?.('.kmWorkspaceView')&&["INPUT","SELECT","TEXTAREA"].includes(a.tagName)}
+  function scheduleRender(){if(isEditing()){pendingRender=true;return}if(renderQueued)return;renderQueued=true;requestAnimationFrame(()=>{renderQueued=false;renderAll()})}
+  function flushRender(){if(!pendingRender)return;pendingRender=false;setTimeout(()=>{if(!isEditing())renderAll()},40)}
+  document.addEventListener("focusout",flushRender);
 
-  function switchTab(tab){
-    tab=String(tab||"master");
-    activeTab=tab; sessionStorage.setItem("dcx-km-tab",tab);
-    document.querySelectorAll(".kmWorkspaceTab").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));
-    document.querySelectorAll(".kmWorkspaceView").forEach(v=>v.classList.toggle("active",v.dataset.kmView===tab));
-    if(tab==="master")renderMaster();
-    if(tab==="players")renderPlayers();
-    if(tab==="teams")renderTeams();
-  }
+  async function attempt(label,fn){if(!ready())return false;try{await fn();toast(label);return true}catch(e){console.error(label,e);toast(`${label} // ERRO`);return false}}
+  async function log(type,text,data={}){try{await ref("eventLog").push().set({type,text,data,ts:now(),by:"KEYMASTER",build:BUILD})}catch(e){console.warn("eventLog",e)}}
 
-  function renderTabs(){
-    document.querySelectorAll(".kmWorkspaceTab").forEach(b=>b.classList.toggle("active",b.dataset.tab===activeTab));
-    document.querySelectorAll(".kmWorkspaceView").forEach(v=>v.classList.toggle("active",v.dataset.kmView===activeTab));
-    const pending = Object.values(requests||{}).reduce((n,node)=>n+Object.keys(node?.chat||{}).length,0);
-    const badge=$("dcxYumiyaTabBadge"); if(badge){badge.textContent=pending;badge.classList.toggle("hidden",!pending)}
-  }
+  function switchTab(tab){activeTab=String(tab||"master");sessionStorage.setItem("dcx-km-tab",activeTab);renderTabs();scheduleRender()}
+  function renderTabs(){document.querySelectorAll(".kmWorkspaceTab").forEach(b=>b.classList.toggle("active",b.dataset.tab===activeTab));document.querySelectorAll(".kmWorkspaceView").forEach(v=>v.classList.toggle("active",v.dataset.kmView===activeTab));const pending=Object.values(requests||{}).reduce((n,node)=>n+Object.keys(node?.chat||{}).length,0);const badge=$("dcxYumiyaTabBadge");if(badge){badge.textContent=pending;badge.classList.toggle("hidden",!pending)}}
 
   function renderMaster(){
     if(!$("dcxMasterStats"))return;
-    const players=operatorEntries().filter(([id,op])=>operatorType(op,id)==="player");
-    const npcs=operatorEntries().filter(([id,op])=>operatorType(op,id)==="npc");
-    const online=Object.values(presence).filter(p=>presenceState(p).cls==="online").length;
-    const distracted=Object.values(presence).filter(p=>["hiddenTab","away"].includes(presenceState(p).cls)).length;
-    $("dcxMasterStats").innerHTML=`
-      <div class="dcxStat"><b>${players.length}</b><span>JOGADORES</span></div>
-      <div class="dcxStat"><b>${npcs.length}</b><span>NPCs</span></div>
-      <div class="dcxStat"><b>${online}</b><span>ATIVOS</span></div>
-      <div class="dcxStat"><b>${distracted}</b><span>SEM FOCO</span></div>
-      <div class="dcxStat"><b>${Object.keys(teams).filter(k=>k!=="_init").length}</b><span>EQUIPES</span></div>`;
-    const list=$("dcxHeartbeatList");
-    if(list){
-      const rows=players.map(([id,op])=>{
-        const p=Object.values(presence).find(x=>x?.playerId===id) || {};
-        const s=presenceState(p);
-        return `<div class="dcxHeartbeatRow"><span class="dcxPresenceDot ${s.cls}"></span><div><b>${esc(operatorName(op,id))}</b><small>${esc(id)} · ${esc(p.build||"BUILD DESCONHECIDA")}</small></div><div class="dcxHeartbeatMeta"><b>${s.label}</b><small>${fmtAgo(p.lastSeen)}${p.lastInteraction?` · interação ${fmtAgo(p.lastInteraction)}`:""}</small></div></div>`;
-      }).join("");
-      list.innerHTML=rows||`<div class="dcxEmpty">Nenhum jogador registrado ainda.</div>`;
-    }
-    if($("dcxMasterRoom"))$("dcxMasterRoom").textContent=room;
-    if($("dcxMasterBuild"))$("dcxMasterBuild").textContent=window.OPH_BUILD||BUILD;
-    if($("dcxMasterUid"))$("dcxMasterUid").textContent=auth?.currentUser?.uid||"—";
+    const players=operatorEntries().filter(([id,op])=>operatorType(op,id)==="player"),npcs=operatorEntries().filter(([id,op])=>operatorType(op,id)==="npc");
+    const online=Object.values(presence).filter(p=>presenceState(p).cls==="online").length,distracted=Object.values(presence).filter(p=>["hiddenTab","away"].includes(presenceState(p).cls)).length;
+    $("dcxMasterStats").innerHTML=`<div class="dcxStat"><b>${players.length}</b><span>JOGADORES</span></div><div class="dcxStat"><b>${npcs.length}</b><span>NPCs</span></div><div class="dcxStat"><b>${online}</b><span>ATIVOS</span></div><div class="dcxStat"><b>${distracted}</b><span>SEM FOCO</span></div><div class="dcxStat"><b>${Object.keys(teams).filter(k=>k!=="_init").length}</b><span>EQUIPES</span></div>`;
+    $("dcxMasterRoom").textContent=room;$("dcxMasterBuild").textContent=window.OPH_BUILD||BUILD;$("dcxMasterUid").textContent=auth?.currentUser?.uid||"—";
+    const list=$("dcxHeartbeatList");if(list){list.innerHTML=players.map(([id,op])=>{const p=Object.values(presence).find(x=>x?.playerId===id)||{},s=presenceState(p);return `<div class="dcxHeartbeatRow"><span class="dcxPresenceDot ${s.cls}"></span><div><b>${esc(operatorName(op,id))}</b><small>${esc(id)} · ${esc(p.build||"BUILD DESCONHECIDA")}</small></div><div class="dcxHeartbeatMeta"><b>${s.label}</b><small>${fmtAgo(p.lastSeen)}${p.lastInteraction?` · interação ${fmtAgo(p.lastInteraction)}`:""}</small></div></div>`}).join("")||`<div class="dcxEmpty">Nenhum jogador registrado ainda.</div>`}
+    const rk=$("dcxRequireKey");if(rk&&!isEditing())rk.checked=!!accessPublic.requireKey;const an=$("dcxAllowNewPlayers");if(an&&!isEditing())an.checked=accessPublic.allowNewPlayers!==false;const ar=$("dcxApprovalRequired");if(ar&&!isEditing())ar.checked=!!accessPublic.approvalRequired;
+    const kl=$("dcxKeyList");if(kl){const entries=Object.entries(invitations||{}).filter(([k])=>k!=="_init").sort((a,b)=>(Number(b[1]?.createdAt)||0)-(Number(a[1]?.createdAt)||0));kl.innerHTML=entries.map(([code,k])=>`<div class="dcxKeyRow"><div><b>${esc(code)}</b><small>${esc(k.label||"CONVITE")}${k.enabled===false?" · REVOGADA":" · ATIVA"}</small></div><div class="actions"><button class="btn" onclick="DCX.Admin.copyKey('${esc(code)}')">COPIAR</button><button class="btn" onclick="DCX.Admin.toggleKey('${esc(code)}',${k.enabled===false?'true':'false'})">${k.enabled===false?'REATIVAR':'REVOGAR'}</button><button class="btn red" onclick="DCX.Admin.deleteKey('${esc(code)}')">EXCLUIR</button></div></div>`).join("")||`<div class="dcxEmpty">Nenhuma Key criada.</div>`}
+    const claimBox=$("dcxClaimList");if(claimBox){const rows=Object.values(claims||{}).sort((a,b)=>(Number(b.ts)||0)-(Number(a.ts)||0));claimBox.innerHTML=rows.slice(0,30).map(c=>`<div class="dcxClaimRow"><b>${esc(c.name||c.playerId||"OPERADOR")}</b><small>${esc(c.playerId||"")} · KEY ${esc(c.key||"—")} · ${fmtAgo(c.ts)}</small></div>`).join("")||`<div class="dcxEmpty">Nenhum acesso registrado.</div>`}
   }
 
-  function renderPlayers(){
-    const list=$("dcxPlayerList"); if(!list)return;
-    const real=operatorEntries().filter(([id,op])=>operatorType(op,id)==="player").sort((a,b)=>operatorName(a[1],a[0]).localeCompare(operatorName(b[1],b[0]),"pt-BR"));
-    list.innerHTML=real.map(([id,op])=>{
-      const n=narrative(op), p=Object.values(presence).find(x=>x?.playerId===id)||{}, ps=presenceState(p);
-      return `<button class="dcxOperatorRow ${selectedOperator===id?"active":""}" onclick="DCX.Admin.selectOperator('${esc(id)}')"><span class="dcxPresenceDot ${ps.cls}"></span><div><b>${esc(operatorName(op,id))}</b><small>${esc(id)} · ${esc(teamName(n.teamId))}</small></div><em>${ps.label}</em></button>`;
-    }).join("") || `<div class="dcxEmpty">Nenhum jogador sincronizado. Assim que um cliente conectado publicar a identidade, ele aparece aqui.</div>`;
-    renderOperatorEditor();
-  }
+  function renderPlayers(){const list=$("dcxPlayerList");if(!list)return;const real=operatorEntries().filter(([id,op])=>operatorType(op,id)==="player").sort((a,b)=>operatorName(a[1],a[0]).localeCompare(operatorName(b[1],b[0]),"pt-BR"));list.innerHTML=real.map(([id,op])=>{const n=narrative(op),p=Object.values(presence).find(x=>x?.playerId===id)||{},ps=presenceState(p);return `<button class="dcxOperatorRow ${selectedOperator===id?"active":""}" onclick="DCX.Admin.selectOperator('${esc(id)}')"><span class="dcxPresenceDot ${ps.cls}"></span><div><b>${esc(operatorName(op,id))}</b><small>${esc(id)} · ${esc(teamName(n.teamId))}</small></div><em>${ps.label}</em></button>`}).join("")||`<div class="dcxEmpty">Nenhum jogador sincronizado. Abra o site de jogador e conecte com um nome.</div>`;renderPlayerEditor()}
+  function renderPlayerEditor(){const box=$("dcxPlayerEditor");if(!box)return;const op=operators[selectedOperator];if(!op||operatorType(op,selectedOperator)!=="player"){box.innerHTML=`<div class="dcxEmpty big">Selecione um jogador para administrar.</div>`;return}const n=narrative(op),p=Object.values(presence).find(x=>x?.playerId===selectedOperator)||{},ps=presenceState(p);box.innerHTML=`<div class="dcxEditorHead"><div><span class="tag">PLAYER DATA</span><h2>${esc(operatorName(op,selectedOperator))}</h2><small>${esc(selectedOperator)}</small></div><span class="dcxStatePill ${ps.cls}">${ps.label}</span></div><div class="dcxFormGrid"><label>NOME<input id="dcxOpName" value="${esc(operatorName(op,selectedOperator))}" maxlength="48"></label><label>EQUIPE<select id="dcxOpTeam"><option value="">SEM EQUIPE</option>${Object.entries(teams).filter(([k])=>k!=="_init").map(([id,t])=>`<option value="${esc(id)}" ${id===n.teamId?"selected":""}>${esc(t.name||id)}</option>`).join("")}</select></label><label>FUNÇÃO<input id="dcxOpRole" value="${esc(n.role)}" maxlength="48"></label><label>STATUS<select id="dcxOpStatus">${options(operatorStatuses,n.status)}</select></label><label>LOCALIZAÇÃO<input id="dcxOpLocation" value="${esc(n.location)}" maxlength="64"></label><label>COMUNICAÇÃO<select id="dcxOpComms">${options(commsStatuses,n.commsStatus)}</select></label></div><div class="dcxTechBox"><b>SESSÃO TÉCNICA</b><span>UID: ${esc(p.uid||"—")}</span><span>BUILD: ${esc(p.build||"—")}</span><span>ÚLTIMO SINAL: ${fmtAgo(p.lastSeen)}</span><span>VISIBILIDADE: ${esc(p.visibility||"—")}</span></div><div class="actions dcxEditorActions"><button class="btn gold" onclick="DCX.Admin.saveSelectedPlayer()">SALVAR ALTERAÇÕES</button>${op.blocked?`<button class="btn" onclick="DCX.Admin.unblockSelectedPlayer()">DESBLOQUEAR P-ID</button>`:`<button class="btn" onclick="DCX.Admin.blockSelectedPlayer()">BLOQUEAR P-ID</button>`}<button class="btn red" onclick="DCX.Admin.removeSelectedPlayer()">REMOVER REGISTRO</button></div>`}
 
-  function renderOperatorEditor(){
-    const box=$("dcxPlayerEditor"); if(!box)return;
-    const op=operators[selectedOperator];
-    if(!op || operatorType(op,selectedOperator)!=="player"){
-      box.innerHTML=`<div class="dcxEmpty big">Selecione um jogador para administrar.</div>`; return;
-    }
-    const n=narrative(op), p=Object.values(presence).find(x=>x?.playerId===selectedOperator)||{}, ps=presenceState(p);
-    box.innerHTML=`
-      <div class="dcxEditorHead"><div><span class="tag">PLAYER DATA</span><h2>${esc(operatorName(op,selectedOperator))}</h2><small>${esc(selectedOperator)}</small></div><span class="dcxStatePill ${ps.cls}">${ps.label}</span></div>
-      <div class="dcxFormGrid">
-        <label>NOME<input id="dcxOpName" value="${esc(operatorName(op,selectedOperator))}" maxlength="48"></label>
-        <label>EQUIPE<select id="dcxOpTeam"><option value="">SEM EQUIPE</option>${Object.entries(teams).filter(([k])=>k!=="_init").map(([id,t])=>`<option value="${esc(id)}" ${id===n.teamId?"selected":""}>${esc(t.name||id)}</option>`).join("")}</select></label>
-        <label>FUNÇÃO<input id="dcxOpRole" value="${esc(n.role)}" maxlength="48" placeholder="Ex.: Líder, Pesquisa, Médico"></label>
-        <label>STATUS<select id="dcxOpStatus">${optionList(operatorStatuses,n.status)}</select></label>
-        <label>LOCALIZAÇÃO<input id="dcxOpLocation" value="${esc(n.location)}" maxlength="64" placeholder="Opcional"></label>
-        <label>COMUNICAÇÃO<select id="dcxOpComms">${optionList(commsStatuses,n.commsStatus)}</select></label>
-      </div>
-      <div class="dcxTechBox"><b>DIAGNÓSTICO DO CLIENTE</b><span>Build: ${esc(p.build||"—")}</span><span>UID atual: ${esc(p.uid||"—")}</span><span>Último heartbeat: ${fmtAgo(p.lastSeen)}</span><span>Última interação: ${fmtAgo(p.lastInteraction)}</span></div>
-      <div class="actions dcxEditorActions"><button class="btn gold" onclick="DCX.Admin.saveSelectedPlayer()">SALVAR ALTERAÇÕES</button><button class="btn red" onclick="DCX.Admin.removeSelectedPlayer()">REMOVER REGISTRO</button></div>`;
-  }
+  function renderTeams(){const list=$("dcxTeamList");if(!list)return;const entries=Object.entries(teams||{}).filter(([id])=>id!=="_init").sort((a,b)=>(a[1]?.name||"").localeCompare(b[1]?.name||"","pt-BR"));list.innerHTML=entries.map(([id,t])=>{const members=operatorEntries().filter(([,op])=>narrative(op).teamId===id);return `<article class="dcxTeamAdminCard"><div class="dcxTeamAdminHead"><div><span class="tag">${esc(t.codename||"EQUIPE")}</span><h3>${esc(t.name||id)}</h3></div><span class="dcxTeamStatus">${esc(t.status||"OPERACIONAL")}</span></div><div class="dcxTeamFields"><label>NOME<input value="${esc(t.name||"")}" onchange="DCX.Admin.updateTeamField('${esc(id)}','name',this.value)"></label><label>CODINOME<input value="${esc(t.codename||"")}" onchange="DCX.Admin.updateTeamField('${esc(id)}','codename',this.value)"></label><label>STATUS<select onchange="DCX.Admin.updateTeamField('${esc(id)}','status',this.value)">${options(teamStatuses,t.status||"OPERACIONAL")}</select></label><label class="span2">DESCRIÇÃO<textarea rows="2" onchange="DCX.Admin.updateTeamField('${esc(id)}','description',this.value)">${esc(t.description||"")}</textarea></label></div><div class="dcxMembers"><b>MEMBROS · ${members.length}</b>${members.map(([oid,op])=>`<button onclick="DCX.Admin.editRosterOperator('${esc(oid)}')">${esc(operatorName(op,oid))}<small>${esc(narrative(op).role||operatorType(op,oid).toUpperCase())}</small></button>`).join("")||`<span class="dcxEmpty">Sem membros.</span>`}</div><div class="actions"><button class="btn" onclick="DCX.Admin.openAddMember('${esc(id)}')">+ CRIAR NPC NESTA EQUIPE</button><button class="btn red" onclick="DCX.Admin.deleteTeam('${esc(id)}')">EXCLUIR EQUIPE</button></div></article>`}).join("")||`<div class="dcxEmpty big">Nenhuma equipe criada.</div>`;const u=$("dcxUnassigned");if(u){const rows=operatorEntries().filter(([,op])=>!narrative(op).teamId);u.innerHTML=rows.map(([id,op])=>`<button onclick="DCX.Admin.editRosterOperator('${esc(id)}')"><b>${esc(operatorName(op,id))}</b><small>${operatorType(op,id)==="npc"?"NPC":"JOGADOR"} · ${esc(narrative(op).status)}</small></button>`).join("")||`<span class="dcxEmpty">Todos os operadores estão alocados.</span>`}if(!$("dcxRosterEditor")?.classList.contains("hidden")&&!isEditing())renderRosterEditor()}
+  function renderRosterEditor(){const box=$("dcxRosterEditor"),op=operators[selectedOperator];if(!box||!op){box?.classList.add("hidden");return}const id=selectedOperator,n=narrative(op),type=operatorType(op,id);box.classList.remove("hidden");box.innerHTML=`<div class="dcxModalCard"><div class="dcxEditorHead"><div><span class="tag">${type==="npc"?"NPC":"JOGADOR"}</span><h2>${esc(operatorName(op,id))}</h2><small>${esc(id)}</small></div><button class="chatIconBtn" onclick="DCX.Admin.closeRosterEditor()">×</button></div><div class="dcxFormGrid"><label>NOME<input id="dcxRosterName" value="${esc(operatorName(op,id))}" maxlength="48"></label><label>EQUIPE<select id="dcxRosterTeam"><option value="">SEM EQUIPE</option>${Object.entries(teams).filter(([k])=>k!=="_init").map(([tid,t])=>`<option value="${esc(tid)}" ${tid===n.teamId?"selected":""}>${esc(t.name||tid)}</option>`).join("")}</select></label><label>FUNÇÃO<input id="dcxRosterRole" value="${esc(n.role)}" maxlength="48"></label><label>STATUS<select id="dcxRosterStatus">${options(operatorStatuses,n.status)}</select></label><label>LOCALIZAÇÃO<input id="dcxRosterLocation" value="${esc(n.location)}" maxlength="64"></label><label>COMUNICAÇÃO<select id="dcxRosterComms">${options(commsStatuses,n.commsStatus)}</select></label></div><div class="actions dcxEditorActions"><button class="btn gold" onclick="DCX.Admin.saveRosterOperator()">SALVAR</button>${type==="npc"?`<button class="btn red" onclick="DCX.Admin.deleteNpc('${esc(id)}')">EXCLUIR NPC</button>`:""}</div></div>`}
 
-  function renderTeams(){
-    const list=$("dcxTeamList"); if(!list)return;
-    const entries=Object.entries(teams).filter(([k])=>k!=="_init").sort((a,b)=>(a[1]?.name||"").localeCompare(b[1]?.name||"","pt-BR"));
-    list.innerHTML=entries.map(([id,t])=>{
-      const members=operatorEntries().filter(([oid,op])=>narrative(op).teamId===id);
-      return `<article class="dcxTeamAdminCard">
-        <div class="dcxTeamAdminHead"><div><span class="tag">${esc(t.codename||"EQUIPE")}</span><h3>${esc(t.name||id)}</h3></div><span class="dcxTeamStatus">${esc(t.status||"OPERACIONAL")}</span></div>
-        ${t.description?`<p>${esc(t.description)}</p>`:""}
-        <div class="dcxTeamFields">
-          <label>NOME<input value="${esc(t.name||"")}" onchange="DCX.Admin.updateTeamField('${esc(id)}','name',this.value)"></label>
-          <label>CODINOME<input value="${esc(t.codename||"")}" onchange="DCX.Admin.updateTeamField('${esc(id)}','codename',this.value)"></label>
-          <label>STATUS<select onchange="DCX.Admin.updateTeamField('${esc(id)}','status',this.value)">${optionList(teamStatuses,t.status||"OPERACIONAL")}</select></label>
-          <label class="span2">DESCRIÇÃO<textarea rows="2" onchange="DCX.Admin.updateTeamField('${esc(id)}','description',this.value)">${esc(t.description||"")}</textarea></label>
-        </div>
-        <div class="dcxMembers"><b>MEMBROS · ${members.length}</b>${members.map(([oid,op])=>`<button onclick="DCX.Admin.editRosterOperator('${esc(oid)}')">${esc(operatorName(op,oid))}<small>${esc(narrative(op).role||operatorType(op,oid).toUpperCase())}</small></button>`).join("")||`<span class="dcxEmpty">Sem membros.</span>`}</div>
-        <div class="actions"><button class="btn" onclick="DCX.Admin.openAddMember('${esc(id)}')">+ CRIAR NPC NESTA EQUIPE</button><button class="btn red" onclick="DCX.Admin.deleteTeam('${esc(id)}')">EXCLUIR EQUIPE</button></div>
-      </article>`;
-    }).join("") || `<div class="dcxEmpty big">Nenhuma equipe criada. Use “CRIAR EQUIPE”.</div>`;
-    renderUnassigned();
-  }
+  function notesFor(pid){const n=notes?.[pid]||{};return Object.entries(n).filter(([id])=>id!=="_init").sort((a,b)=>(Number(b[1]?.updatedAt)||0)-(Number(a[1]?.updatedAt)||0))}
+  function renderNotes(){const pl=$("dcxNotesPlayerList"),nl=$("dcxNotesList"),ed=$("dcxNoteEditor");if(!pl||!nl||!ed)return;const players=operatorEntries().filter(([id,op])=>operatorType(op,id)==="player");pl.innerHTML=players.map(([id,op])=>`<button class="dcxNotePlayer ${selectedNotesPlayer===id?"active":""}" onclick="DCX.Admin.selectNotesPlayer('${esc(id)}')"><b>${esc(operatorName(op,id))}</b><small>${notesFor(id).length} NOTA(S)</small></button>`).join("")||`<div class="dcxEmpty">Nenhum jogador registrado.</div>`;if(!selectedNotesPlayer||!operators[selectedNotesPlayer]){nl.innerHTML=`<div class="dcxEmpty">Selecione um jogador.</div>`;ed.innerHTML=`<div class="dcxEmpty big">Selecione um jogador para visualizar as anotações.</div>`;return}const arr=notesFor(selectedNotesPlayer);nl.innerHTML=`<button class="btn gold dcxNoteNew" onclick="DCX.Admin.createNoteForPlayer()">+ NOVA NOTA</button>`+arr.map(([id,n])=>`<button class="dcxNoteRow ${selectedNote===id?"active":""}" onclick="DCX.Admin.selectAdminNote('${esc(id)}')"><b>${esc(n.title||"Sem título")}</b><small>${fmtAgo(n.updatedAt)} · ${esc(n.updatedBy||"PLAYER")}</small></button>`).join("");const note=notes?.[selectedNotesPlayer]?.[selectedNote];if(!note){ed.innerHTML=`<div class="dcxEmpty big">Selecione ou crie uma anotação.</div>`;return}ed.innerHTML=`<div class="dcxEditorHead"><div><span class="tag">ANOTAÇÃO // ${esc(operatorName(operators[selectedNotesPlayer],selectedNotesPlayer))}</span><h2>${esc(note.title||"Sem título")}</h2><small>Última edição: ${fmtAgo(note.updatedAt)} · ${esc(note.updatedBy||"—")}</small></div></div><label class="dcxNoteLabel">TÍTULO<input id="dcxAdminNoteTitle" maxlength="100" value="${esc(note.title||"")}"></label><label class="dcxNoteLabel">CONTEÚDO<textarea id="dcxAdminNoteBody" rows="18" maxlength="20000">${esc(note.body||"")}</textarea></label><div class="actions"><button class="btn gold" onclick="DCX.Admin.saveAdminNote()">SALVAR</button><button class="btn red" onclick="DCX.Admin.deleteAdminNote()">EXCLUIR</button></div>`}
 
-  function renderUnassigned(){
-    const box=$("dcxUnassigned"); if(!box)return;
-    const rows=operatorEntries().filter(([id,op])=>!narrative(op).teamId);
-    box.innerHTML=rows.map(([id,op])=>`<button onclick="DCX.Admin.editRosterOperator('${esc(id)}')"><b>${esc(operatorName(op,id))}</b><small>${operatorType(op,id)==="npc"?"NPC":"JOGADOR"} · ${esc(narrative(op).status)}</small></button>`).join("")||`<span class="dcxEmpty">Todos os operadores estão alocados.</span>`;
-  }
+  async function syncExistingPlayers(){if(!db)return;const snap=await db.ref(`rooms/${room}/requests`).once("value");requests=snap.val()||{};const updates={};for(const node of Object.values(requests)){const i=node?.identity;if(!i?.playerId||!i?.nickname)continue;const id=String(i.playerId),old=operators[id]||{};updates[`${id}/identity`]={type:"player",playerId:id,name:clean(i.nickname),updatedAt:Date.now()};if(!old.narrative)updates[`${id}/narrative`]={teamId:"",role:"",status:"OPERACIONAL",location:"",commsStatus:"ONLINE",visible:true}}if(Object.keys(updates).length)await ref("operators").update(updates)}
+  function queueSyncPlayers(){clearTimeout(requestsSyncTimer);requestsSyncTimer=setTimeout(()=>syncExistingPlayers().catch(e=>console.error("sync players",e)),180)}
 
-  function renderRosterEditor(){
-    const box=$("dcxRosterEditor"); if(!box)return;
-    const op=operators[selectedOperator]; if(!op){box.classList.add("hidden");return}
-    const id=selectedOperator,n=narrative(op),type=operatorType(op,id);
-    box.classList.remove("hidden");
-    box.innerHTML=`<div class="dcxModalCard"><div class="dcxEditorHead"><div><span class="tag">${type==="npc"?"NPC":"JOGADOR"}</span><h2>${esc(operatorName(op,id))}</h2><small>${esc(id)}</small></div><button class="chatIconBtn" onclick="DCX.Admin.closeRosterEditor()">×</button></div>
-      <div class="dcxFormGrid">
-        <label>NOME<input id="dcxRosterName" value="${esc(operatorName(op,id))}" maxlength="48"></label>
-        <label>EQUIPE<select id="dcxRosterTeam"><option value="">SEM EQUIPE</option>${Object.entries(teams).filter(([k])=>k!=="_init").map(([tid,t])=>`<option value="${esc(tid)}" ${tid===n.teamId?"selected":""}>${esc(t.name||tid)}</option>`).join("")}</select></label>
-        <label>FUNÇÃO<input id="dcxRosterRole" value="${esc(n.role)}" maxlength="48"></label>
-        <label>STATUS<select id="dcxRosterStatus">${optionList(operatorStatuses,n.status)}</select></label>
-        <label>LOCALIZAÇÃO<input id="dcxRosterLocation" value="${esc(n.location)}" maxlength="64"></label>
-        <label>COMUNICAÇÃO<select id="dcxRosterComms">${optionList(commsStatuses,n.commsStatus)}</select></label>
-      </div>
-      <div class="actions dcxEditorActions"><button class="btn gold" onclick="DCX.Admin.saveRosterOperator()">SALVAR</button>${type==="npc"?`<button class="btn red" onclick="DCX.Admin.deleteNpc('${esc(id)}')">EXCLUIR NPC</button>`:""}</div></div>`;
-  }
+  async function setRequireKey(v){await attempt("ACESSO ATUALIZADO",async()=>{await ref("access/public").update({requireKey:!!v,updatedAt:now()});await log("access.requireKey",`Exigir Key: ${!!v}`)})}
+  async function setAllowNew(v){await attempt("ACESSO ATUALIZADO",async()=>{await ref("access/public").update({allowNewPlayers:!!v,updatedAt:now()})})}
+  async function setApproval(v){await attempt("ACESSO ATUALIZADO",async()=>{await ref("access/public").update({approvalRequired:!!v,updatedAt:now()})})}
+  async function createKey(){let code=keyCode($("dcxNewKeyCode")?.value)||randomKey();const label=clean($("dcxNewKeyLabel")?.value||"CONVITE",64);await attempt("KEY CRIADA",async()=>{const ex=await ref(`access/invitations/${code}`).once("value");if(ex.exists())throw new Error("Key já existe");await ref(`access/invitations/${code}`).set({label,enabled:true,createdAt:now(),updatedAt:now()});$("dcxNewKeyCode").value="";$("dcxNewKeyLabel").value="";await log("access.key.create",`Key ${code} criada`,{code,label})})}
+  async function toggleKey(code,enabled){await attempt(enabled?"KEY REATIVADA":"KEY REVOGADA",async()=>{await ref(`access/invitations/${code}`).update({enabled:!!enabled,updatedAt:now()})})}
+  async function deleteKey(code){if(!confirm(`Excluir a Key ${code}?`))return;await attempt("KEY EXCLUÍDA",async()=>{await ref(`access/invitations/${code}`).remove()})}
+  function copyKey(code){navigator.clipboard?.writeText(code).then(()=>toast("KEY COPIADA")).catch(()=>toast(code))}
 
-  async function syncExistingPlayers(){
-    const snap=await db.ref(`rooms/${room}/requests`).once("value"); requests=snap.val()||{};
-    const updates={};
-    for(const node of Object.values(requests)){
-      const i=node?.identity; if(!i?.playerId||!i?.nickname)continue;
-      const id=String(i.playerId), old=operators[id]||{};
-      updates[`${id}/identity`]={type:"player",playerId:id,name:cleanName(i.nickname),updatedAt:Date.now()};
-      if(!old.narrative)updates[`${id}/narrative`]={teamId:"",role:"",status:"OPERACIONAL",location:"",commsStatus:"ONLINE",visible:true};
-    }
-    if(Object.keys(updates).length)await ref("operators").update(updates);
-  }
-
-  async function createTeam(){
-    const name=cleanName($("dcxNewTeamName")?.value); if(!name){toast("INFORME O NOME DA EQUIPE");return}
-    const id=safeId("TEAM");
-    await ref(`teams/${id}`).set({name,codename:cleanName($("dcxNewTeamCode")?.value),description:String($("dcxNewTeamDesc")?.value||"").trim().slice(0,500),status:"OPERACIONAL",createdAt:now(),updatedAt:now()});
-    if($("dcxNewTeamName"))$("dcxNewTeamName").value=""; if($("dcxNewTeamCode"))$("dcxNewTeamCode").value=""; if($("dcxNewTeamDesc"))$("dcxNewTeamDesc").value="";
-    await log("team.create",`Equipe ${name} criada`,{teamId:id}); toast("EQUIPE CRIADA");
-  }
-  async function updateTeamField(id,field,value){
-    if(!["name","codename","description","status"].includes(field))return;
-    value=field==="description"?String(value||"").trim().slice(0,500):cleanName(value);
-    if(field==="name"&&!value){toast("NOME DA EQUIPE NÃO PODE FICAR VAZIO");renderTeams();return}
-    await ref(`teams/${id}`).update({[field]:value,updatedAt:now()}); await log("team.update",`Equipe ${teams[id]?.name||id}: ${field} alterado`,{teamId:id,field,value});
-  }
-  async function deleteTeam(id){
-    const t=teams[id]; if(!t)return; if(!confirm(`Excluir a equipe “${t.name||id}”?\n\nOs operadores não serão excluídos; eles ficarão SEM EQUIPE.`))return;
-    const updates={}; operatorEntries().forEach(([oid,op])=>{if(narrative(op).teamId===id)updates[`operators/${oid}/narrative/teamId`]=""}); updates[`teams/${id}`]=null;
-    await db.ref(`rooms/${room}/dcx`).update(updates); await log("team.delete",`Equipe ${t.name||id} excluída`,{teamId:id}); toast("EQUIPE EXCLUÍDA");
-  }
-  function openAddMember(teamId){
-    const choice=prompt(`Adicionar à ${teams[teamId]?.name||"equipe"}:\n\nDigite o NOME de um NPC novo.\n\nPara adicionar um jogador existente, cancele e abra o operador em “SEM ALOCAÇÃO”.`);
-    if(choice===null)return; const name=cleanName(choice); if(!name){toast("NOME INVÁLIDO");return} createNpc(name,teamId);
-  }
-  async function createNpc(nameArg="",teamId=""){
-    const name=cleanName(nameArg || $("dcxNpcName")?.value); if(!name){toast("INFORME O NOME DO NPC");return}
-    const id=safeId("NPC");
-    await ref(`operators/${id}`).set({identity:{type:"npc",name,npcId:id,createdAt:now(),updatedAt:now()},narrative:{teamId:teamId||"",role:"",status:"OPERACIONAL",location:"",commsStatus:"ONLINE",visible:true}});
-    if($("dcxNpcName"))$("dcxNpcName").value=""; await log("npc.create",`NPC ${name} criado`,{npcId:id,teamId}); toast("NPC CRIADO");
-  }
-  async function deleteNpc(id){
-    const op=operators[id]; if(!op||operatorType(op,id)!=="npc")return; const name=operatorName(op,id);
-    if(!confirm(`Excluir o NPC “${name}” definitivamente?`))return;
-    await ref(`operators/${id}`).remove(); await log("npc.delete",`NPC ${name} excluído`,{npcId:id}); closeRosterEditor(); toast("NPC EXCLUÍDO");
-  }
+  async function createTeam(){const name=clean($("dcxNewTeamName")?.value);if(!name){toast("INFORME O NOME DA EQUIPE");return}await attempt("EQUIPE CRIADA",async()=>{const id=safeId("TEAM"),item={name,codename:clean($("dcxNewTeamCode")?.value,32),description:String($("dcxNewTeamDesc")?.value||"").trim().slice(0,500),status:"OPERACIONAL",createdAt:now(),updatedAt:now()};await ref(`teams/${id}`).set(item);teams[id]=item;$("dcxNewTeamName").value="";$("dcxNewTeamCode").value="";$("dcxNewTeamDesc").value="";renderTeams();await log("team.create",`Equipe ${name} criada`,{teamId:id})})}
+  async function updateTeamField(id,field,value){if(!["name","codename","description","status"].includes(field))return;value=field==="description"?String(value||"").trim().slice(0,500):clean(value,field==="codename"?32:48);if(field==="name"&&!value){toast("NOME DA EQUIPE NÃO PODE FICAR VAZIO");return}await attempt("EQUIPE ATUALIZADA",async()=>{await ref(`teams/${id}`).update({[field]:value,updatedAt:now()});if(teams[id])teams[id][field]=value;await log("team.update",`${teams[id]?.name||id}: ${field}`,{teamId:id,field,value})})}
+  async function deleteTeam(id){const t=teams[id];if(!t||!confirm(`Excluir a equipe “${t.name||id}”?\n\nOs operadores ficarão SEM EQUIPE.`))return;await attempt("EQUIPE EXCLUÍDA",async()=>{const updates={};operatorEntries().forEach(([oid,op])=>{if(narrative(op).teamId===id)updates[`operators/${oid}/narrative/teamId`]=""});updates[`teams/${id}`]=null;await db.ref(`rooms/${room}/dcx`).update(updates);await log("team.delete",`Equipe ${t.name||id} excluída`,{teamId:id})})}
+  function openAddMember(teamId){const choice=prompt(`Digite o NOME do novo NPC para ${teams[teamId]?.name||"esta equipe"}:`);if(choice===null)return;createNpc(choice,teamId)}
+  async function createNpc(nameArg="",teamId=""){const name=clean(nameArg||$("dcxNpcName")?.value);if(!name){toast("INFORME O NOME DO NPC");return}await attempt("NPC CRIADO",async()=>{const id=safeId("NPC");await ref(`operators/${id}`).set({identity:{type:"npc",name,npcId:id,createdAt:now(),updatedAt:now()},narrative:{teamId:teamId||"",role:"",status:"OPERACIONAL",location:"",commsStatus:"ONLINE",visible:true}});if($("dcxNpcName"))$("dcxNpcName").value="";await log("npc.create",`NPC ${name} criado`,{npcId:id,teamId})})}
+  async function deleteNpc(id){const op=operators[id];if(!op||operatorType(op,id)!=="npc"||!confirm(`Excluir o NPC “${operatorName(op,id)}” definitivamente?`))return;await attempt("NPC EXCLUÍDO",async()=>{await ref(`operators/${id}`).remove();selectedOperator="";closeRosterEditor()})}
   function editRosterOperator(id){selectedOperator=id;renderRosterEditor()}
   function closeRosterEditor(){selectedOperator="";$("dcxRosterEditor")?.classList.add("hidden")}
-  async function saveRosterOperator(){
-    const id=selectedOperator,op=operators[id]; if(!op)return; const name=cleanName($("dcxRosterName")?.value); if(!name){toast("NOME INVÁLIDO");return}
-    const type=operatorType(op,id), updates={};
-    updates[`operators/${id}/identity/name`]=name; updates[`operators/${id}/identity/updatedAt`]=now();
-    updates[`operators/${id}/narrative`]={teamId:$("dcxRosterTeam")?.value||"",role:cleanName($("dcxRosterRole")?.value),status:$("dcxRosterStatus")?.value||"OPERACIONAL",location:cleanName($("dcxRosterLocation")?.value),commsStatus:$("dcxRosterComms")?.value||"ONLINE",visible:true,updatedAt:now()};
-    await db.ref(`rooms/${room}/dcx`).update(updates); await log(`${type}.update`,`${name} atualizado`,{operatorId:id}); toast("OPERADOR ATUALIZADO"); closeRosterEditor();
-  }
+  async function saveRosterOperator(){const id=selectedOperator,op=operators[id];if(!op)return;const name=clean($("dcxRosterName")?.value);if(!name){toast("NOME INVÁLIDO");return}const n={teamId:$("dcxRosterTeam")?.value||"",role:clean($("dcxRosterRole")?.value),status:$("dcxRosterStatus")?.value||"OPERACIONAL",location:clean($("dcxRosterLocation")?.value,64),commsStatus:$("dcxRosterComms")?.value||"ONLINE",visible:true,updatedAt:now()};await attempt("OPERADOR ATUALIZADO",async()=>{await db.ref(`rooms/${room}/dcx`).update({[`operators/${id}/identity/name`]:name,[`operators/${id}/identity/updatedAt`]:now(),[`operators/${id}/narrative`]:n});closeRosterEditor()})}
   function selectOperator(id){selectedOperator=id;renderPlayers()}
-  async function saveSelectedPlayer(){
-    const id=selectedOperator,op=operators[id]; if(!op)return; const name=cleanName($("dcxOpName")?.value); if(!name){toast("NOME INVÁLIDO");return}
-    const n={teamId:$("dcxOpTeam")?.value||"",role:cleanName($("dcxOpRole")?.value),status:$("dcxOpStatus")?.value||"OPERACIONAL",location:cleanName($("dcxOpLocation")?.value),commsStatus:$("dcxOpComms")?.value||"ONLINE",visible:true,updatedAt:now()};
-    await db.ref(`rooms/${room}/dcx`).update({[`operators/${id}/identity/name`]:name,[`operators/${id}/identity/updatedAt`]:now(),[`operators/${id}/narrative`]:n});
-    // mantém o nome do contato legado sincronizado quando possível
-    for(const [uid,node] of Object.entries(requests||{})){if(node?.identity?.playerId===id)await db.ref(`rooms/${room}/requests/${uid}/identity/nickname`).set(name)}
-    await log("player.update",`${name} atualizado`,{playerId:id}); toast("JOGADOR ATUALIZADO");
-  }
-  async function removeSelectedPlayer(){
-    const id=selectedOperator,op=operators[id]; if(!op)return; const name=operatorName(op,id);
-    if(!confirm(`Remover o registro de ${name} do DCX OS?\n\nO P-ID poderá reaparecer se o jogador reconectar. Isso NÃO é o bloqueio por Key, que virá na fase de acesso.`))return;
-    const matching=Object.entries(requests||{}).filter(([,n])=>n?.identity?.playerId===id).map(([uid])=>uid);
-    const updates={[`operators/${id}`]:null}; Object.entries(presence).forEach(([uid,p])=>{if(p?.playerId===id)updates[`presence/${uid}`]=null});
-    await ref().update(updates); await Promise.allSettled(matching.map(uid=>db.ref(`rooms/${room}/requests/${uid}`).remove())); selectedOperator=""; await log("player.remove",`${name} removido`,{playerId:id}); toast("REGISTRO REMOVIDO");
-  }
+  async function saveSelectedPlayer(){const id=selectedOperator,op=operators[id];if(!op)return;const name=clean($("dcxOpName")?.value);if(!name){toast("NOME INVÁLIDO");return}const n={teamId:$("dcxOpTeam")?.value||"",role:clean($("dcxOpRole")?.value),status:$("dcxOpStatus")?.value||"OPERACIONAL",location:clean($("dcxOpLocation")?.value,64),commsStatus:$("dcxOpComms")?.value||"ONLINE",visible:true,updatedAt:now()};await attempt("JOGADOR ATUALIZADO",async()=>{await db.ref(`rooms/${room}/dcx`).update({[`operators/${id}/identity/name`]:name,[`operators/${id}/identity/updatedAt`]:now(),[`operators/${id}/narrative`]:n});for(const [uid,node] of Object.entries(requests||{})){if(node?.identity?.playerId===id)await db.ref(`rooms/${room}/requests/${uid}/identity/nickname`).set(name)}})}
+  async function removeSelectedPlayer(){const id=selectedOperator,op=operators[id];if(!op||!confirm(`Remover ${operatorName(op,id)} da sala?\n\nO registro e presença serão apagados. Se a Key continuar válida, ele poderá entrar novamente.`))return;await attempt("JOGADOR REMOVIDO",async()=>{const updates={[`operators/${id}`]:null};Object.entries(presence).forEach(([uid,p])=>{if(p?.playerId===id)updates[`presence/${uid}`]=null});await ref().update(updates);for(const [uid,node] of Object.entries(requests||{})){if(node?.identity?.playerId===id)await db.ref(`rooms/${room}/requests/${uid}`).remove()}selectedOperator=""})}
+  async function blockSelectedPlayer(){const id=selectedOperator,op=operators[id];if(!op)return;if(!confirm(`Bloquear o P-ID ${id}?\n\nO jogador será impedido pelo gate neste P-ID. O registro administrativo será mantido para você poder desbloquear/inspecionar depois.`))return;await attempt("P-ID BLOQUEADO",async()=>{await ref(`access/blockedPlayers/${id}`).set({blocked:true,name:operatorName(op,id),ts:now()});await ref(`operators/${id}`).update({blocked:true,updatedAt:now()})})}
+  async function unblockSelectedPlayer(){const id=selectedOperator,op=operators[id];if(!op)return;await attempt("P-ID DESBLOQUEADO",async()=>{await ref(`access/blockedPlayers/${id}`).remove();await ref(`operators/${id}`).update({blocked:false,updatedAt:now()})})}
+
+  function selectNotesPlayer(id){selectedNotesPlayer=id;selectedNote="";renderNotes()}
+  function selectAdminNote(id){selectedNote=id;renderNotes()}
+  async function createNoteForPlayer(){if(!selectedNotesPlayer)return;await attempt("NOTA CRIADA",async()=>{const r=ref(`notes/${selectedNotesPlayer}`).push();await r.set({title:"Nova anotação",body:"",createdAt:now(),updatedAt:now(),updatedBy:"KEYMASTER"});selectedNote=r.key})}
+  async function saveAdminNote(){if(!selectedNotesPlayer||!selectedNote)return;const title=clean($("dcxAdminNoteTitle")?.value||"Sem título",100),body=String($("dcxAdminNoteBody")?.value||"").slice(0,20000);await attempt("NOTA SALVA",async()=>{await ref(`notes/${selectedNotesPlayer}/${selectedNote}`).update({title,body,updatedAt:now(),updatedBy:"KEYMASTER"})})}
+  async function deleteAdminNote(){if(!selectedNotesPlayer||!selectedNote||!confirm("Excluir esta anotação?"))return;await attempt("NOTA EXCLUÍDA",async()=>{await ref(`notes/${selectedNotesPlayer}/${selectedNote}`).remove();selectedNote=""})}
 
   async function init(force=false){
-    if(!window.firebase?.apps?.length || !firebase.auth().currentUser)return;
-    auth=firebase.auth(); if(auth.currentUser.uid!==ADMIN_UID){console.warn("DCX Admin: usuário não é Keymaster autorizado");return}
-    const targetRoom=OPH.Realtime?.getRoom?.()||room;
-    if(initialized && !force && targetRoom===room)return;
-    if(initialized){refs.forEach(r=>{try{r.off()}catch(e){}});refs=[];initialized=false}
-    db=firebase.database(); room=targetRoom; base=`rooms/${room}/dcx`; initialized=true;
-    const bind=(p,cb)=>{const r=ref(p);r.on("value",s=>cb(s.val()||{}));refs.push(r)};
-    bind("operators",v=>{operators=v||{};renderAll()}); bind("teams",v=>{teams=v||{};renderAll()}); bind("presence",v=>{presence=v||{};renderAll()});
-    const rr=db.ref(`rooms/${room}/requests`);rr.on("value",s=>{requests=s.val()||{};renderTabs()});refs.push(rr);
-    try{await ref("meta").update({initialized:true,schemaVersion:1,systemName:"DCX OS",roomId:room,lastKeymasterBuild:window.OPH_BUILD||BUILD,lastKeymasterSeen:now()});await db.ref(`rooms/${room}/state`).update({"visible/family":null,"n02/family":null});await syncExistingPlayers()}catch(e){console.error("DCX init",e);toast("DCX OS // REGRAS AINDA NÃO LIBERADAS")}
-    renderAll(); setInterval(renderMaster,5000);
+    try{
+      if(!window.firebase?.apps?.length){console.warn("DCX Admin aguardando Firebase");return false}
+      auth=firebase.auth();if(!auth.currentUser){console.warn("DCX Admin aguardando login Keymaster");return false}
+      if(auth.currentUser.uid!==ADMIN_UID){console.warn("DCX Admin: UID não autorizado",auth.currentUser.uid);toast("DCX OS // UID DO KEYMASTER NÃO AUTORIZADO");return false}
+      const target=window.OPH?.Realtime?.getRoom?.()||room;if(initialized&&!force&&target===room)return true;
+      refs.forEach(r=>{try{r.off()}catch(e){}});refs=[];clearInterval(heartbeatInterval);initialized=false;
+      db=firebase.database();room=target;base=`rooms/${room}/dcx`;initialized=true;
+      const bind=(p,cb)=>{const r=ref(p);r.on("value",s=>{cb(s.val()||{});scheduleRender()});refs.push(r)};
+      bind("operators",v=>operators=v||{});bind("teams",v=>teams=v||{});bind("presence",v=>presence=v||{});bind("access/public",v=>accessPublic=v||{});bind("access/invitations",v=>invitations=v||{});bind("access/claims",v=>claims=v||{});bind("notes",v=>notes=v||{});
+      const rr=db.ref(`rooms/${room}/requests`);rr.on("value",s=>{requests=s.val()||{};renderTabs();queueSyncPlayers()});refs.push(rr);
+      await ref("meta").update({initialized:true,schemaVersion:2,systemName:"DCX OS",roomId:room,lastKeymasterBuild:BUILD,lastKeymasterSeen:now()});
+      const pub=await ref("access/public").once("value");if(!pub.exists())await ref("access/public").set({requireKey:false,allowNewPlayers:true,approvalRequired:false,updatedAt:now()});
+      await syncExistingPlayers();renderAll();heartbeatInterval=setInterval(renderMaster,5000);toast("DCX OS A2 // SINCRONIZADO");return true;
+    }catch(e){console.error("DCX Admin init",e);initialized=false;toast("DCX OS // FALHA DE INICIALIZAÇÃO");return false}
   }
-  function renderAll(){renderTabs();renderMaster();renderPlayers();renderTeams();if(!$("dcxRosterEditor")?.classList.contains("hidden"))renderRosterEditor()}
-
+  function renderAll(){renderTabs();if(activeTab==="master")renderMaster();if(activeTab==="players")renderPlayers();if(activeTab==="teams")renderTeams();if(activeTab==="notes")renderNotes()}
   function copyPlayerLink(){const input=$("playerUrl");if(!input)return;navigator.clipboard?.writeText(input.value).then(()=>toast("LINK COPIADO")).catch(()=>{input.select();document.execCommand("copy");toast("LINK COPIADO")})}
 
-  window.DCX.Admin={switchTab,init,createTeam,updateTeamField,deleteTeam,openAddMember,createNpc,deleteNpc,editRosterOperator,closeRosterEditor,saveRosterOperator,selectOperator,saveSelectedPlayer,removeSelectedPlayer,copyPlayerLink};
-
-  // IMPORTANTE: a navegação do Keymaster não pode depender do Firebase já estar
-  // inicializado. Na A1, firebase.auth() era chamado aqui no carregamento e
-  // lançava "No Firebase App '[DEFAULT]' has been created", interrompendo o
-  // script antes de registrar os cliques das abas. O login do KM inicializa o
-  // Firebase e chama DCX.Admin.init(true) depois da conexão.
-  function bindWorkspaceTabs(){
-    document.querySelectorAll(".kmWorkspaceTab").forEach(b=>{
-      if(b.dataset.dcxBound==="1")return;
-      b.dataset.dcxBound="1";
-      b.addEventListener("click",()=>switchTab(b.dataset.tab));
-    });
-    renderTabs();
-  }
-  if(document.readyState==="loading") window.addEventListener("DOMContentLoaded",bindWorkspaceTabs,{once:true});
-  else bindWorkspaceTabs();
+  window.DCX.Admin={switchTab,init,copyPlayerLink,setRequireKey,setAllowNew,setApproval,createKey,toggleKey,deleteKey,copyKey,createTeam,updateTeamField,deleteTeam,openAddMember,createNpc,deleteNpc,editRosterOperator,closeRosterEditor,saveRosterOperator,selectOperator,saveSelectedPlayer,removeSelectedPlayer,blockSelectedPlayer,unblockSelectedPlayer,selectNotesPlayer,selectAdminNote,createNoteForPlayer,saveAdminNote,deleteAdminNote};
+  function bindTabs(){document.querySelectorAll(".kmWorkspaceTab").forEach(b=>{if(b.dataset.dcxBound)return;b.dataset.dcxBound="1";b.addEventListener("click",()=>switchTab(b.dataset.tab))});renderTabs()}
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bindTabs,{once:true});else bindTabs();
 })();

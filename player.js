@@ -1,9 +1,9 @@
 window.OPH = window.OPH || {};
-console.info("[DCX OS] A1 // PLAYER // YUMIYA CORE FINAL-11");
+console.info("[DCX OS] A2 RECOVERY // PLAYER // YUMIYA CORE FINAL-11");
 (() => {
   let state = OPH.cloneDefault();
   let room = new URLSearchParams(location.search).get("room") || localStorage.getItem("oph-room") || window.OPH_CONFIG.defaultRoom || "FRIA-01";
-  let connected=false, currentStage=0, lastEventId=null, playerUid=null, chatOpen=false, focusMode=false, unread=0, lastSeenCommsTs=0;
+  let connected=false, currentStage=0, lastEventId=null, eventStreamReady=false, playerUid=null, chatOpen=false, focusMode=false, unread=0, lastSeenCommsTs=0;
   const stageDefs=[
     ["home","ABERTURA"],["government","GOVERNO"],["h01","H-01"],["approaches","PLANO"],["preps","D-1"],["n02","N-02"],["protocol","PROTO"]
   ];
@@ -179,7 +179,7 @@ console.info("[DCX OS] A1 // PLAYER // YUMIYA CORE FINAL-11");
     backdrop?.classList.toggle("hidden",!focusMode || !chatOpen);
     document.body.classList.toggle("yumiyaFocusActive",focusMode && chatOpen);
     if(btn){btn.classList.toggle("active",focusMode);btn.querySelector("b").textContent=focusMode?"VOLTAR AO COMPACTO":"ABRIR FOCUS"}
-    if(mode)mode.textContent=focusMode?"MODO: FOCUS // DCX OS A1":"MODO: COMPACTO // DCX OS A1";
+    if(mode)mode.textContent=focusMode?"MODO: FOCUS // DCX OS A2":"MODO: COMPACTO // DCX OS A2";
   }
   function toggleYumiyaFocus(force){
     focusMode=typeof force==="boolean"?force:!focusMode;
@@ -261,7 +261,11 @@ console.info("[DCX OS] A1 // PLAYER // YUMIYA CORE FINAL-11");
     $("emSim").classList.toggle("hidden",!state.visible.emergencySim);
   }
   function renderEvent(){
-    const ev=state.event;if(!ev||!ev.id||ev.id===lastEventId)return;lastEventId=ev.id;
+    const ev=state.event;
+    // O primeiro snapshot serve apenas como baseline. Um alerta persistido de uma sessão
+    // anterior não deve saltar na tela toda vez que o jogador abre/recarrega o site.
+    if(!eventStreamReady){lastEventId=ev?.id||null;eventStreamReady=true;return}
+    if(!ev||!ev.id||ev.id===lastEventId)return;lastEventId=ev.id;
     $("eventTitle").textContent=ev.title||"ALERTA";$("eventBody").textContent=ev.body||"";$("eventOverlay").classList.add("show");beep(ev.type==="n02"?240:180,.1);
     setTimeout(()=>$("eventOverlay").classList.remove("show"),ev.duration||5000);
   }
@@ -449,7 +453,7 @@ console.info("[DCX OS] A1 // PLAYER // YUMIYA CORE FINAL-11");
     }
     try{
       const r=await OPH.Realtime.connect({roomId:room,asHost:false});connected=true;playerUid=r.uid||OPH.Realtime.getUid();
-      $("conn").classList.add("on");$("mode").textContent=r.mode.toUpperCase();await publishYumiyaIdentity();setTimeout(()=>window.DCX?.Player?.init?.(true),450);toast("CONECTADO À SALA "+room);renderYumiya()
+      $("conn").classList.add("on");$("mode").textContent=r.mode.toUpperCase();await publishYumiyaIdentity();await window.DCX?.Player?.init?.(true);toast("CONECTADO À SALA "+room);renderYumiya()
     }
     catch(e){toast("FALHA AO CONECTAR");console.error(e)}
   }
@@ -464,6 +468,6 @@ console.info("[DCX OS] A1 // PLAYER // YUMIYA CORE FINAL-11");
     $("yumiyaRenameInput")?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();confirmYumiyaRename()}else if(e.key==="Escape"){e.preventDefault();cancelYumiyaRename()}});
     document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("yumiyaRenamePanel")?.classList.contains("hidden")){e.preventDefault();cancelYumiyaRename();return}if(e.key==="Escape"&&focusMode){e.preventDefault();toggleYumiyaFocus(false)}});
     setupYumiyaPortrait();applyYumiyaFocus();
-    connect();render()
+    render();setTimeout(()=>window.DCX?.Player?.bootstrap?.(),0)
   });
 })();

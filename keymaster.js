@@ -1,10 +1,14 @@
 window.OPH = window.OPH || {};
-console.info("[DCX OS] A1 // KEYMASTER // YUMIYA CORE FINAL-11");
+console.info("[DCX OS] A2 RECOVERY // KEYMASTER // YUMIYA CORE FINAL-11");
 (() => {
   let state=OPH.cloneDefault(),stateLoaded=false,timelineSyncing=false,suppressTimelineSync=false,renderDeferred=false,room=new URLSearchParams(location.search).get("room")||window.OPH_CONFIG.defaultRoom||"FRIA-01",requests={},selectedChat=null,selectedProfileUid="";
   const $=id=>document.getElementById(id);
   function toast(t){const e=$("toast");e.textContent=t;e.classList.add("show");setTimeout(()=>e.classList.remove("show"),1600)}
   function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+  function focused(el){return !!el&&document.activeElement===el}
+  function syncValue(el,v){if(el&&!focused(el))el.value=String(v)}
+  function syncCheck(el,v){if(el&&!focused(el))el.checked=!!v}
+  function syncSelect(el,items,preferred){if(!el||focused(el))return;const sig=items.map(x=>x.value+"::"+x.label).join("||");if(el.dataset.sig!==sig){el.innerHTML="";items.forEach(x=>{const o=document.createElement("option");o.value=x.value;o.textContent=x.label;el.appendChild(o)});el.dataset.sig=sig}if(items.some(x=>x.value===preferred))el.value=preferred}
   function archiveKey(){return "oph-km-yumiya-archive-"+room}
   function contactsKey(){return "oph-km-yumiya-contacts-"+room}
   function getArchive(){try{return JSON.parse(localStorage.getItem(archiveKey())||"[]").filter(Boolean)}catch(e){return[]}}
@@ -183,11 +187,11 @@ console.info("[DCX OS] A1 // KEYMASTER // YUMIYA CORE FINAL-11");
         <div class="actions"><button class="btn gold" onclick="KM.selectChat('${uid}','${id}')">RESPONDER</button><button class="btn" onclick="KM.archiveIncoming('${uid}','${id}')">ARQUIVAR</button><button class="btn" onclick="KM.dismissChat('${uid}','${id}')">DESCARTAR</button></div>
       </div>`).join(""):`<div class="card"><p>Nenhuma mensagem aguardando resposta.</p></div>`;
 
-    const current=$("chatTarget").value||"all";
+    const target=$("chatTarget"),current=target?.value||"all";
     const sortedContacts=Object.values(contacts).sort((a,b)=>(+b.lastSeen||0)-(+a.lastSeen||0));
-    $("chatTarget").innerHTML=`<option value="all">TODOS // GLOBAL</option>`+sortedContacts.map(who=>`<option value="${esc(who.uid)}">${esc(who.name)}${who.playerId?` // ${esc(who.playerId)}`:""} // DIRETO</option>`).join("");
-    if([...$("chatTarget").options].some(o=>o.value===current))$("chatTarget").value=current;
-    else if(selectedChat?.uid && [...$("chatTarget").options].some(o=>o.value===selectedChat.uid))$("chatTarget").value=selectedChat.uid;
+    const targetItems=[{value:"all",label:"TODOS // GLOBAL"},...sortedContacts.map(who=>({value:who.uid,label:`${who.name}${who.playerId?` // ${who.playerId}`:""} // DIRETO`}))];
+    const preferred=targetItems.some(x=>x.value===current)?current:(selectedChat?.uid&&targetItems.some(x=>x.value===selectedChat.uid)?selectedChat.uid:"all");
+    syncSelect(target,targetItems,preferred);
     renderContactTools();
 
     const canonicalOutgoing=(state.comms.timeline||[]).filter(m=>m?.kind==="yumiya");
@@ -213,9 +217,9 @@ console.info("[DCX OS] A1 // KEYMASTER // YUMIYA CORE FINAL-11");
   function renderAffect(){
     const a=state.comms.affect||{anger:12,tension:18,euphoria:10,portrait:"normal"};
     const anger=clampMood(a.anger),tension=clampMood(a.tension),euphoria=clampMood(a.euphoria),portrait=["normal","fear","embarrassed","anger","happy"].includes(a.portrait)?a.portrait:"normal";
-    if($("yumiyaAngerCtl"))$("yumiyaAngerCtl").value=anger;
-    if($("yumiyaTensionCtl"))$("yumiyaTensionCtl").value=tension;
-    if($("yumiyaEuphoriaCtl"))$("yumiyaEuphoriaCtl").value=euphoria;
+    syncValue($("yumiyaAngerCtl"),anger);
+    syncValue($("yumiyaTensionCtl"),tension);
+    syncValue($("yumiyaEuphoriaCtl"),euphoria);
     if($("yumiyaAngerValue"))$("yumiyaAngerValue").textContent=anger+"%";
     if($("yumiyaTensionValue"))$("yumiyaTensionValue").textContent=tension+"%";
     if($("yumiyaEuphoriaValue"))$("yumiyaEuphoriaValue").textContent=euphoria+"%";
@@ -260,25 +264,26 @@ console.info("[DCX OS] A1 // KEYMASTER // YUMIYA CORE FINAL-11");
     const contacts=getContacts();
     const current=selectedProfileUid||select.value||"";
     const sorted=Object.values(contacts).filter(c=>c.playerId).sort((a,b)=>(+b.lastSeen||0)-(+a.lastSeen||0));
-    select.innerHTML=`<option value="">SELECIONE UM OPERADOR</option>`+sorted.map(c=>`<option value="${esc(c.uid)}">${esc(c.name)} // ${esc(c.playerId)}</option>`).join("");
-    if(sorted.some(c=>c.uid===current)){select.value=current;selectedProfileUid=current}else if(current){selectedProfileUid=""}
+    const operatorItems=[{value:"",label:"SELECIONE UM OPERADOR"},...sorted.map(c=>({value:c.uid,label:`${c.name} // ${c.playerId}`}))];
+    const operatorPreferred=operatorItems.some(x=>x.value===current)?current:"";syncSelect(select,operatorItems,operatorPreferred);
+    if(operatorPreferred)selectedProfileUid=operatorPreferred;else if(current&&!focused(select))selectedProfileUid=""
     const contact=selectedProfileContact();
     const body=$("operatorProfileBody"),enabled=$("operatorProfileEnabled"),status=$("operatorProfileStatus");
     if(!contact){
-      body?.classList.add("disabled");if(enabled){enabled.checked=false;enabled.disabled=true}if(status){status.textContent="SEM OPERADOR";status.classList.remove("active")};return;
+      body?.classList.add("disabled");if(enabled){syncCheck(enabled,false);enabled.disabled=true}if(status){status.textContent="SEM OPERADOR";status.classList.remove("active")};return;
     }
     if(enabled)enabled.disabled=false;
     const p=getOperatorProfile(contact,false);
     const active=!!p?.enabled;
-    if(enabled)enabled.checked=active;
+    syncCheck(enabled,active);
     body?.classList.toggle("disabled",!active);
     if(status){status.textContent=active?`EXCLUSIVO // ${contact.name}`:`GLOBAL // ${contact.name}`;status.classList.toggle("active",active)}
     const base=state.comms.affect||{anger:12,tension:18,euphoria:10,portrait:"normal"};
     const view=Object.assign({preset:"standard",tone:"professional",anger:base.anger,tension:base.tension,euphoria:base.euphoria,portrait:base.portrait||"normal"},p||{});
-    if($("operatorPreset"))$("operatorPreset").value=["standard","kang"].includes(view.preset)?view.preset:"standard";
-    if($("operatorTone"))$("operatorTone").value=["professional","warm","provocative","cold","hostile"].includes(view.tone)?view.tone:"professional";
+    syncValue($("operatorPreset"),["standard","kang"].includes(view.preset)?view.preset:"standard");
+    syncValue($("operatorTone"),["professional","warm","provocative","cold","hostile"].includes(view.tone)?view.tone:"professional");
     const anger=clampMood(view.anger),tension=clampMood(view.tension),euphoria=clampMood(view.euphoria);
-    if($("operatorAngerCtl"))$("operatorAngerCtl").value=anger;if($("operatorTensionCtl"))$("operatorTensionCtl").value=tension;if($("operatorEuphoriaCtl"))$("operatorEuphoriaCtl").value=euphoria;
+    syncValue($("operatorAngerCtl"),anger);syncValue($("operatorTensionCtl"),tension);syncValue($("operatorEuphoriaCtl"),euphoria);
     if($("operatorAngerValue"))$("operatorAngerValue").textContent=anger+"%";if($("operatorTensionValue"))$("operatorTensionValue").textContent=tension+"%";if($("operatorEuphoriaValue"))$("operatorEuphoriaValue").textContent=euphoria+"%";
     document.querySelectorAll("#operatorPortraitCtl [data-portrait]").forEach(b=>b.classList.toggle("gold",b.dataset.portrait===(view.portrait||"normal")));
     if($("operatorAssetHint"))$("operatorAssetHint").textContent=view.preset==="kang"?"Kang procura yumiya-kang-normal/medo/envergonhada/raiva/feliz.png e cai nos portraits padrão se não encontrar.":"Preset padrão usa os cinco portraits atuais da Yumiya.";
@@ -313,10 +318,10 @@ console.info("[DCX OS] A1 // KEYMASTER // YUMIYA CORE FINAL-11");
     room=$("room").value.trim().toUpperCase()||"FRIA-01";history.replaceState(null,"",`?room=${encodeURIComponent(room)}`);
     const fb=window.OPH_CONFIG?.firebase?.enabled;
     const credentials=fb?{email:$("email").value,password:$("password").value}:{password:$("localPassword").value};
-    try{const r=await OPH.Realtime.connect({roomId:room,asHost:true,credentials});$("login").classList.add("hidden");$("console").classList.remove("hidden");$("mode").textContent=r.mode.toUpperCase();setTimeout(()=>window.DCX?.Admin?.init?.(true),60);toast("KEYMASTER CONECTADO")}
+    try{const r=await OPH.Realtime.connect({roomId:room,asHost:true,credentials});$("login").classList.add("hidden");$("console").classList.remove("hidden");$("mode").textContent=r.mode.toUpperCase();await window.DCX?.Admin?.init?.(true);toast("KEYMASTER CONECTADO")}
     catch(e){toast("FALHA DE AUTENTICAÇÃO/CONEXÃO");console.error(e)}
   }
-  function event(type,title,body){state.event={id:crypto.randomUUID?.()||String(Date.now())+Math.random(),type,title,body,duration:5200};save()}
+  function event(type,title,body){state.event={id:crypto.randomUUID?.()||String(Date.now())+Math.random(),type,title,body,duration:5200,ts:Date.now()};save()}
   async function selectChat(uid,id){
     const item=chatRequests().find(x=>x.uid===uid&&x.id===id);
     selectedChat=item?{uid,id}:null;

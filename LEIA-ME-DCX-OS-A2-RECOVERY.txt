@@ -1,0 +1,28 @@
+DCX OS A2 // RECOVERY
+=====================
+
+Esta build existe para recuperar regressões introduzidas pela A1/A1.1.
+
+IMPLEMENTADO NESTA BUILD:
+- Gate de entrada por Key (ativável no MASTER).
+- Sincronização de jogadores reais a partir de requests/identity.
+- PLAYER DATA com edição, remoção, bloqueio/desbloqueio.
+- EQUIPES // STATUS: criar/editar/excluir equipe, descrição, codinome e status vivo.
+- NPCs com nome, edição e exclusão.
+- Painel EQUIPE somente leitura no jogador.
+- ANOTAÇÕES do jogador com autosave no Firebase, edição do Keymaster e exportação pelo diálogo de impressão/PDF.
+- Heartbeat: ativo, sem foco, guia oculta/minimizada e offline.
+- Supressão do alerta H-01 antigo no primeiro snapshot ao abrir/recarregar a página.
+- Yumiya preservada sobre o core FINAL-11 e inicialização do player corrigida.
+- Proteção contra re-render destrutivo enquanto campos do Keymaster/Yumiya estão em edição.
+
+AINDA NÃO IMPLEMENTADO:
+- HANDOUTS (a aba permanece explicitamente como placeholder).
+- Aprovação manual de Keys (controle aparece desativado/reservado).
+- Votações, canal de equipe, notificações, agendamentos, checkpoints e COMMS JAM completos.
+
+IMPORTANTE:
+1) Publique primeiro firebase-rules-DCX-OS-A2-RECOVERY.txt no Realtime Database > Regras.
+2) Depois envie os arquivos do ZIP SITE para o GitHub, sobrescrevendo os atuais.
+3) No MASTER, crie uma Key e só então ative EXIGIR KEY PARA ENTRAR.
+4) Para testar o gate como jogador novo, use janela anônima ou remova a Key salva desse navegador.
