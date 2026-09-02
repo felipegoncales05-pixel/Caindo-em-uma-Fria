@@ -263,6 +263,20 @@ window.DCX = window.DCX || {};
   function copyPlayerLink(){const input=$("playerUrl");if(!input)return;navigator.clipboard?.writeText(input.value).then(()=>toast("LINK COPIADO")).catch(()=>{input.select();document.execCommand("copy");toast("LINK COPIADO")})}
 
   window.DCX.Admin={switchTab,init,createTeam,updateTeamField,deleteTeam,openAddMember,createNpc,deleteNpc,editRosterOperator,closeRosterEditor,saveRosterOperator,selectOperator,saveSelectedPlayer,removeSelectedPlayer,copyPlayerLink};
-  firebase.auth().onAuthStateChanged(user=>{if(user&&!user.isAnonymous)setTimeout(init,50)});
-  window.addEventListener("DOMContentLoaded",()=>{document.querySelectorAll(".kmWorkspaceTab").forEach(b=>b.addEventListener("click",()=>switchTab(b.dataset.tab)));renderTabs()});
+
+  // IMPORTANTE: a navegação do Keymaster não pode depender do Firebase já estar
+  // inicializado. Na A1, firebase.auth() era chamado aqui no carregamento e
+  // lançava "No Firebase App '[DEFAULT]' has been created", interrompendo o
+  // script antes de registrar os cliques das abas. O login do KM inicializa o
+  // Firebase e chama DCX.Admin.init(true) depois da conexão.
+  function bindWorkspaceTabs(){
+    document.querySelectorAll(".kmWorkspaceTab").forEach(b=>{
+      if(b.dataset.dcxBound==="1")return;
+      b.dataset.dcxBound="1";
+      b.addEventListener("click",()=>switchTab(b.dataset.tab));
+    });
+    renderTabs();
+  }
+  if(document.readyState==="loading") window.addEventListener("DOMContentLoaded",bindWorkspaceTabs,{once:true});
+  else bindWorkspaceTabs();
 })();
