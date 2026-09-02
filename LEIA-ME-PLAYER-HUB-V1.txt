@@ -1,0 +1,8 @@
+DCX OS // PLAYER HUB V1
+
+Mudança exclusivamente de interface do jogador:
+- GOLPE: conteúdo da missão / H-01 / N-02 / planejamento.
+- DCX: Yumiya Remote, Equipe // Status e Anotações.
+- Handouts, Notificações, Votações e Canal da Equipe aparecem apenas como módulos EM PREPARAÇÃO.
+- A última área escolhida fica salva localmente.
+- Nenhuma alteração em Firebase Rules, Auth, UID, paths ou realtime.
