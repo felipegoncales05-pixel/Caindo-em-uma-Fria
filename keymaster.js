@@ -1,5 +1,5 @@
 window.OPH = window.OPH || {};
-console.info("[DCX OS] A2 RECOVERY // KEYMASTER // YUMIYA CORE FINAL-11");
+console.info("[DCX OS] A2.2 AUTH ISOLATION // KEYMASTER // YUMIYA CORE FINAL-11");
 (() => {
   let state=OPH.cloneDefault(),stateLoaded=false,timelineSyncing=false,suppressTimelineSync=false,renderDeferred=false,room=new URLSearchParams(location.search).get("room")||window.OPH_CONFIG.defaultRoom||"FRIA-01",requests={},selectedChat=null,selectedProfileUid="";
   const $=id=>document.getElementById(id);
@@ -318,7 +318,7 @@ console.info("[DCX OS] A2 RECOVERY // KEYMASTER // YUMIYA CORE FINAL-11");
     room=$("room").value.trim().toUpperCase()||"FRIA-01";history.replaceState(null,"",`?room=${encodeURIComponent(room)}`);
     const fb=window.OPH_CONFIG?.firebase?.enabled;
     const credentials=fb?{email:$("email").value,password:$("password").value}:{password:$("localPassword").value};
-    try{const r=await OPH.Realtime.connect({roomId:room,asHost:true,credentials});$("login").classList.add("hidden");$("console").classList.remove("hidden");$("mode").textContent=r.mode.toUpperCase();await window.DCX?.Admin?.init?.(true);toast("KEYMASTER CONECTADO")}
+    try{const r=await OPH.Realtime.connect({roomId:room,asHost:true,credentials});$("login").classList.add("hidden");$("console").classList.remove("hidden");$("mode").textContent=r.mode.toUpperCase();const dcxOk=await window.DCX?.Admin?.init?.(true);toast(dcxOk===false?"KEYMASTER CONECTADO // DCX ADMIN COM ERRO":"KEYMASTER CONECTADO")}
     catch(e){toast("FALHA DE AUTENTICAÇÃO/CONEXÃO");console.error(e)}
   }
   function event(type,title,body){state.event={id:crypto.randomUUID?.()||String(Date.now())+Math.random(),type,title,body,duration:5200,ts:Date.now()};save()}

@@ -1,7 +1,7 @@
 window.OPH = window.OPH || {};
 OPH.Realtime = (() => {
   let mode = "local";
-  let ws = null, db = null, auth = null, uid = null, room = null;
+  let ws = null, db = null, auth = null, app = null, uid = null, room = null;
   let stateCallbacks = [], requestCallbacks = [];
   let bc = null, stateRef = null, reqRef = null;
 
@@ -27,11 +27,20 @@ OPH.Realtime = (() => {
     stateRef = reqRef = bc = ws = null;
   }
 
+  function firebaseAppName(asHost){ return asHost ? "OPH_KEYMASTER" : "OPH_PLAYER"; }
+  function getOrCreateFirebaseApp(asHost){
+    const name=firebaseAppName(asHost);
+    try{ return firebase.app(name); }
+    catch(e){ return firebase.initializeApp(window.OPH_CONFIG.firebase,name); }
+  }
+
   async function connectFirebase(asHost, creds={}){
     mode = "firebase";
-    if(!firebase.apps.length) firebase.initializeApp(window.OPH_CONFIG.firebase);
-    auth = firebase.auth();
-    db = firebase.database();
+    app = getOrCreateFirebaseApp(asHost);
+    auth = app.auth();
+    db = app.database();
+    // Cada papel usa um Firebase App nomeado. Assim uma aba PLAYER nunca troca
+    // a sessão autenticada da aba KEYMASTER (e vice-versa).
     try{ await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION); }catch(e){}
     if(asHost){
       if(!creds.email || !creds.password) throw new Error("Credenciais Firebase ausentes");
@@ -40,6 +49,7 @@ OPH.Realtime = (() => {
       if(auth.currentUser && !auth.currentUser.isAnonymous){ try{ await auth.signOut(); }catch(e){} }
       if(!auth.currentUser) await auth.signInAnonymously();
     }
+    if(!auth.currentUser) throw new Error("Firebase Auth sem usuário após login");
     uid = auth.currentUser.uid;
     stateRef = db.ref(`rooms/${room}/state`);
     stateRef.on("value", snap => emitState(snap.val() || OPH.cloneDefault()));
@@ -196,5 +206,10 @@ OPH.Realtime = (() => {
     const all=readLocal(reqStoreKey(),{}); for(const node of Object.values(all)){ if(node?.chat) delete node.chat; } for(const k of Object.keys(all)){ if(!Object.keys(all[k]||{}).length) delete all[k]; } postRequests(all);
   }
 
-  return {connect,onState,onRequests,setState,patchState,sendRequest,sendChat,publishIdentity,clearRequest,clearChat,clearAllChats,removeOperator,getMode:()=>mode,getUid:()=>uid,getRoom:()=>room};
+  return {
+    connect,onState,onRequests,setState,patchState,sendRequest,sendChat,publishIdentity,clearRequest,clearChat,clearAllChats,removeOperator,
+    getMode:()=>mode,getUid:()=>uid,getRoom:()=>room,
+    getFirebaseAuth:()=>auth,getFirebaseDatabase:()=>db,getFirebaseApp:()=>app,
+    getFirebaseAppName:()=>app?.name||null,roleAppName:role=>role==="host"?"OPH_KEYMASTER":"OPH_PLAYER"
+  };
 })();

@@ -1,0 +1,104 @@
+{
+  "rules": {
+    "rooms": {
+      "$room": {
+        "state": {
+          ".read": "auth != null",
+          ".write": "auth != null && auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1'"
+        },
+        "requests": {
+          ".read": "auth != null && auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1'",
+          "$uid": {
+            ".write": "auth != null && ($uid === auth.uid || auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1')"
+          }
+        },
+        "dcx": {
+          "meta": {
+            ".read": "auth != null",
+            ".write": "auth != null && auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1'"
+          },
+          "access": {
+            "public": {
+              ".read": "auth != null",
+              ".write": "auth != null && auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1'"
+            },
+            "invitations": {
+              ".read": "auth != null && auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1'",
+              "$code": {
+                ".read": "auth != null",
+                ".write": "auth != null && auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1'"
+              }
+            },
+            "claims": {
+              ".read": "auth != null && auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1'",
+              "$uid": {
+                ".read": "auth != null && ($uid === auth.uid || auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1')",
+                ".write": "auth != null && ($uid === auth.uid || auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1')"
+              }
+            },
+            "blockedPlayers": {
+              ".read": "auth != null && auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1'",
+              "$playerId": {
+                ".read": "auth != null",
+                ".write": "auth != null && auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1'"
+              }
+            }
+          },
+          "operators": {
+            ".read": "auth != null",
+            ".write": "auth != null && auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1'"
+          },
+          "teams": {
+            ".read": "auth != null",
+            ".write": "auth != null && auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1'"
+          },
+          "presence": {
+            ".read": "auth != null && auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1'",
+            "$uid": {
+              ".write": "auth != null && ($uid === auth.uid || auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1')"
+            }
+          },
+          "notes": {
+            ".read": "auth != null && auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1'",
+            "$playerId": {
+              ".read": "auth != null && (auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1' || $playerId === root.child('rooms').child($room).child('requests').child(auth.uid).child('identity').child('playerId').val())",
+              ".write": "auth != null && (auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1' || $playerId === root.child('rooms').child($room).child('requests').child(auth.uid).child('identity').child('playerId').val())"
+            }
+          },
+          "commsJam": {
+            ".read": "auth != null",
+            ".write": "auth != null && auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1'"
+          },
+          "notifications": {
+            ".read": "auth != null && auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1'",
+            ".write": "auth != null && auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1'"
+          },
+          "handouts": {
+            ".read": "auth != null && auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1'",
+            ".write": "auth != null && auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1'"
+          },
+          "polls": {
+            ".read": "auth != null && auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1'",
+            ".write": "auth != null && auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1'"
+          },
+          "teamChat": {
+            ".read": "auth != null && auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1'",
+            ".write": "auth != null && auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1'"
+          },
+          "scheduled": {
+            ".read": "auth != null && auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1'",
+            ".write": "auth != null && auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1'"
+          },
+          "checkpoints": {
+            ".read": "auth != null && auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1'",
+            ".write": "auth != null && auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1'"
+          },
+          "eventLog": {
+            ".read": "auth != null && auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1'",
+            ".write": "auth != null && auth.uid === '1uVVp67PW7c53fs6dstTDNE46Nz1'"
+          }
+        }
+      }
+    }
+  }
+}

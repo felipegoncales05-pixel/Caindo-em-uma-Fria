@@ -1,5 +1,5 @@
 window.OPH = window.OPH || {};
-window.OPH_BUILD = "DCX-OS-A2-RECOVERY";
+window.OPH_BUILD = "DCX-OS-A2.2-AUTH-ISOLATION";
 OPH.DEFAULT_STATE = {
   version: 12,
   focusStage: 0,

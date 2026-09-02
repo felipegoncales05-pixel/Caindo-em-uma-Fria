@@ -1,0 +1,17 @@
+DCX OS A2.2 // AUTH ISOLATION
+
+CORREÇÃO PRINCIPAL
+- Keymaster e Player agora usam Firebase Apps nomeados separados.
+- Uma aba de jogador não pode mais trocar/deslogar a sessão Firebase do Keymaster.
+- Remove a checagem hardcoded de UID do dcx-admin.js; a autorização real continua nas Firebase Rules.
+- DCX Admin só fica pronto depois que uma escrita protegida em dcx/meta é aceita.
+- Diagnóstico visível no MASTER: FIREBASE AUTH e DCX ADMIN.
+- Cache-buster de todos os assets alterado para DCXOSA22.
+
+SINAIS DE QUE A BUILD NOVA CARREGOU
+Keymaster: DCX OS A2.2 // AUTH ISOLATION
+Player: DCX OS A2.2 // AUTH ISOLATION
+No código carregado, os assets devem terminar em ?v=DCXOSA22.
+
+FIREBASE RULES
+Não é necessário alterar as Rules A2 Recovery que já estão publicadas.

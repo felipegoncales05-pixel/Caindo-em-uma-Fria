@@ -1,0 +1,16 @@
+DCX OS // A1.1 — HOTFIX KEYMASTER
+================================
+
+CORREÇÃO
+- Corrige as abas/opções novas do Keymaster que não respondiam.
+- Causa: dcx-admin.js chamava firebase.auth() antes de o app Firebase existir.
+- A navegação agora é ligada independentemente da conexão Firebase.
+- O DCX Admin continua sendo inicializado depois do login do Keymaster.
+
+FIREBASE
+- NÃO é necessário alterar/importar o banco novamente.
+- NÃO é necessário alterar as Rules novamente se as Rules A1 já foram publicadas.
+
+GITHUB
+- Suba o conteúdo deste pacote por cima dos arquivos atuais.
+- O Keymaster deve mostrar DCX OS A1.1.

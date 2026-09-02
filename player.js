@@ -1,5 +1,5 @@
 window.OPH = window.OPH || {};
-console.info("[DCX OS] A2 RECOVERY // PLAYER // YUMIYA CORE FINAL-11");
+console.info("[DCX OS] A2.2 AUTH ISOLATION // PLAYER // YUMIYA CORE FINAL-11");
 (() => {
   let state = OPH.cloneDefault();
   let room = new URLSearchParams(location.search).get("room") || localStorage.getItem("oph-room") || window.OPH_CONFIG.defaultRoom || "FRIA-01";

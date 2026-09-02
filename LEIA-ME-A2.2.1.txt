@@ -1,0 +1,9 @@
+DCX OS A2.2.1 — AUTH ISOLATION + SYNC QOL
+
+- Mantém isolamento de autenticação entre Keymaster e Player da A2.2.
+- Remove spam de "AGUARDE A SINCRONIZAÇÃO" a cada clique.
+- Enquanto o DCX Admin não estiver pronto, o status no MASTER mostra SINCRONIZANDO.
+- O aviso visual é limitado a no máximo um a cada 12 segundos.
+- Cache-buster do Keymaster: DCXOSA221.
+
+Não altera Firebase Rules.

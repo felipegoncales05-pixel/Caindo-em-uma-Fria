@@ -1,6 +1,6 @@
 window.DCX = window.DCX || {};
 (() => {
-  const BUILD = "DCX-OS-A2.1-AUTHFIX";
+  const BUILD = "DCX-OS-A2.2.1-AUTH-ISOLATION";
   const $ = id => document.getElementById(id);
   const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const teamStatuses = ["OPERACIONAL","EM MISSÃO","EM COMBATE","REAGRUPANDO","EVACUANDO","SEM COMUNICAÇÃO","INATIVA"];
@@ -12,7 +12,7 @@ window.DCX = window.DCX || {};
   let operators={}, teams={}, presence={}, requests={}, accessPublic={}, invitations={}, claims={}, notes={};
   let selectedOperator="", selectedNotesPlayer="", selectedNote="";
   let activeTab=sessionStorage.getItem("dcx-km-tab")||"master";
-  let refs=[], renderQueued=false, pendingRender=false, heartbeatInterval=null, requestsSyncTimer=null;
+  let refs=[], renderQueued=false, pendingRender=false, heartbeatInterval=null, requestsSyncTimer=null, lastNotReadyNotice=0;
 
   function toast(text){const e=$("toast");if(!e)return;e.textContent=text;e.classList.add("show");setTimeout(()=>e.classList.remove("show"),1900)}
   function clean(v,max=48){return String(v||"").trim().replace(/\s+/g," ").slice(0,max)}
@@ -30,7 +30,17 @@ window.DCX = window.DCX || {};
   function fmtAgo(ts){ts=Number(ts)||0;if(!ts)return"SEM SINAL";const s=Math.max(0,Math.floor((Date.now()-ts)/1000));if(s<5)return"AGORA";if(s<60)return`HÁ ${s}s`;const m=Math.floor(s/60);if(m<60)return`HÁ ${m}min`;return`HÁ ${Math.floor(m/60)}h`}
   function presenceState(p){if(!p?.lastSeen)return{label:"OFFLINE",cls:"offline"};const age=Date.now()-Number(p.lastSeen||0);if(age>90000)return{label:"OFFLINE",cls:"offline"};if(p.visibility==="hidden")return{label:"OUTRA GUIA / MINIMIZADO",cls:"hiddenTab"};if(p.focused===false)return{label:"SEM FOCO",cls:"away"};if(age>45000)return{label:"INATIVO",cls:"away"};return{label:"ATIVO",cls:"online"}}
   function options(vals,current){return vals.map(v=>`<option value="${esc(v)}" ${v===current?"selected":""}>${esc(v)}</option>`).join("")}
-  function ready(){if(!initialized||!db){toast("DCX OS // AGUARDE A SINCRONIZAÇÃO");return false}return true}
+  function ready(){
+    if(initialized&&db)return true;
+    setDiag("dcxMasterSync","DCX ADMIN // SINCRONIZANDO…",false);
+    const t=Date.now();
+    if(t-lastNotReadyNotice>12000){
+      lastNotReadyNotice=t;
+      toast("DCX OS // SINCRONIZANDO — AGUARDE");
+    }
+    return false;
+  }
+  function setDiag(id,text,ok=true){const e=$(id);if(!e)return;e.textContent=text;e.dataset.state=ok?"ok":"error"}
 
   function isEditing(){const a=document.activeElement;if(!a)return false;return !!a.closest?.('.kmWorkspaceView')&&["INPUT","SELECT","TEXTAREA"].includes(a.tagName)}
   function scheduleRender(){if(isEditing()){pendingRender=true;return}if(renderQueued)return;renderQueued=true;requestAnimationFrame(()=>{renderQueued=false;renderAll()})}
@@ -49,6 +59,8 @@ window.DCX = window.DCX || {};
     const online=Object.values(presence).filter(p=>presenceState(p).cls==="online").length,distracted=Object.values(presence).filter(p=>["hiddenTab","away"].includes(presenceState(p).cls)).length;
     $("dcxMasterStats").innerHTML=`<div class="dcxStat"><b>${players.length}</b><span>JOGADORES</span></div><div class="dcxStat"><b>${npcs.length}</b><span>NPCs</span></div><div class="dcxStat"><b>${online}</b><span>ATIVOS</span></div><div class="dcxStat"><b>${distracted}</b><span>SEM FOCO</span></div><div class="dcxStat"><b>${Object.keys(teams).filter(k=>k!=="_init").length}</b><span>EQUIPES</span></div>`;
     $("dcxMasterRoom").textContent=room;$("dcxMasterBuild").textContent=window.OPH_BUILD||BUILD;$("dcxMasterUid").textContent=auth?.currentUser?.uid||"—";
+    setDiag("dcxMasterAuth",auth?.currentUser?`AUTH OK // ${auth.currentUser.uid.slice(0,8)}…`:"AUTH AUSENTE",!!auth?.currentUser);
+    setDiag("dcxMasterSync",initialized?"DCX ADMIN // SINCRONIZADO":"DCX ADMIN // NÃO SINCRONIZADO",initialized);
     const list=$("dcxHeartbeatList");if(list){list.innerHTML=players.map(([id,op])=>{const p=Object.values(presence).find(x=>x?.playerId===id)||{},s=presenceState(p);return `<div class="dcxHeartbeatRow"><span class="dcxPresenceDot ${s.cls}"></span><div><b>${esc(operatorName(op,id))}</b><small>${esc(id)} · ${esc(p.build||"BUILD DESCONHECIDA")}</small></div><div class="dcxHeartbeatMeta"><b>${s.label}</b><small>${fmtAgo(p.lastSeen)}${p.lastInteraction?` · interação ${fmtAgo(p.lastInteraction)}`:""}</small></div></div>`}).join("")||`<div class="dcxEmpty">Nenhum jogador registrado ainda.</div>`}
     const rk=$("dcxRequireKey");if(rk&&!isEditing())rk.checked=!!accessPublic.requireKey;const an=$("dcxAllowNewPlayers");if(an&&!isEditing())an.checked=accessPublic.allowNewPlayers!==false;const ar=$("dcxApprovalRequired");if(ar&&!isEditing())ar.checked=!!accessPublic.approvalRequired;
     const kl=$("dcxKeyList");if(kl){const entries=Object.entries(invitations||{}).filter(([k])=>k!=="_init").sort((a,b)=>(Number(b[1]?.createdAt)||0)-(Number(a[1]?.createdAt)||0));kl.innerHTML=entries.map(([code,k])=>`<div class="dcxKeyRow"><div><b>${esc(code)}</b><small>${esc(k.label||"CONVITE")}${k.enabled===false?" · REVOGADA":" · ATIVA"}</small></div><div class="actions"><button class="btn" onclick="DCX.Admin.copyKey('${esc(code)}')">COPIAR</button><button class="btn" onclick="DCX.Admin.toggleKey('${esc(code)}',${k.enabled===false?'true':'false'})">${k.enabled===false?'REATIVAR':'REVOGAR'}</button><button class="btn red" onclick="DCX.Admin.deleteKey('${esc(code)}')">EXCLUIR</button></div></div>`).join("")||`<div class="dcxEmpty">Nenhuma Key criada.</div>`}
@@ -98,19 +110,29 @@ window.DCX = window.DCX || {};
 
   async function init(force=false){
     try{
-      if(!window.firebase?.apps?.length){console.warn("DCX Admin aguardando Firebase");return false}
-      auth=firebase.auth();if(!auth.currentUser){console.warn("DCX Admin aguardando login Keymaster");return false}
-      console.info("DCX Admin // Firebase Auth UID",auth.currentUser.uid);
-      const target=window.OPH?.Realtime?.getRoom?.()||room;if(initialized&&!force&&target===room)return true;
+      const rt=window.OPH?.Realtime;
+      auth=rt?.getFirebaseAuth?.()||null;
+      db=rt?.getFirebaseDatabase?.()||null;
+      if(!auth||!db){console.warn("DCX Admin aguardando Firebase do Keymaster");setDiag("dcxMasterAuth","AUTH AINDA NÃO PRONTO",false);return false}
+      if(!auth.currentUser){console.warn("DCX Admin aguardando login Keymaster");setDiag("dcxMasterAuth","AUTH SEM USUÁRIO",false);return false}
+      const target=rt?.getRoom?.()||room;
+      if(initialized&&!force&&target===room)return true;
       refs.forEach(r=>{try{r.off()}catch(e){}});refs=[];clearInterval(heartbeatInterval);initialized=false;
-      db=firebase.database();room=target;base=`rooms/${room}/dcx`;initialized=true;
-      const bind=(p,cb)=>{const r=ref(p);r.on("value",s=>{cb(s.val()||{});scheduleRender()});refs.push(r)};
+      room=target;base=`rooms/${room}/dcx`;
+      console.info("DCX Admin // Auth isolado",{uid:auth.currentUser.uid,app:rt?.getFirebaseAppName?.(),room});
+      // A autorização real é a Firebase Rule. Esta escrita protegida é o teste de saúde.
+      await db.ref(`rooms/${room}/dcx/meta`).update({initialized:true,schemaVersion:3,systemName:"DCX OS",roomId:room,lastKeymasterBuild:BUILD,lastKeymasterSeen:now()});
+      initialized=true;setDiag("dcxMasterAuth",`AUTH OK // ${auth.currentUser.uid.slice(0,8)}…`,true);setDiag("dcxMasterSync","DCX ADMIN // SINCRONIZADO",true);
+      const bind=(p,cb)=>{const r=ref(p);r.on("value",s=>{cb(s.val()||{});scheduleRender()},e=>{console.error(`DCX listener ${p}`,e);setDiag("dcxMasterSync",`ERRO // ${e.code||"LISTENER"}`,false)});refs.push(r)};
       bind("operators",v=>operators=v||{});bind("teams",v=>teams=v||{});bind("presence",v=>presence=v||{});bind("access/public",v=>accessPublic=v||{});bind("access/invitations",v=>invitations=v||{});bind("access/claims",v=>claims=v||{});bind("notes",v=>notes=v||{});
-      const rr=db.ref(`rooms/${room}/requests`);rr.on("value",s=>{requests=s.val()||{};renderTabs();queueSyncPlayers()});refs.push(rr);
-      await ref("meta").update({initialized:true,schemaVersion:2,systemName:"DCX OS",roomId:room,lastKeymasterBuild:BUILD,lastKeymasterSeen:now()});
+      const rr=db.ref(`rooms/${room}/requests`);rr.on("value",s=>{requests=s.val()||{};renderTabs();queueSyncPlayers()},e=>console.error("DCX requests listener",e));refs.push(rr);
       const pub=await ref("access/public").once("value");if(!pub.exists())await ref("access/public").set({requireKey:false,allowNewPlayers:true,approvalRequired:false,updatedAt:now()});
-      await syncExistingPlayers();renderAll();heartbeatInterval=setInterval(renderMaster,5000);toast("DCX OS A2 // SINCRONIZADO");return true;
-    }catch(e){console.error("DCX Admin init",e);initialized=false;const code=String(e?.code||"").toUpperCase();toast(code.includes("PERMISSION")?"DCX OS // FIREBASE NEGOU O ACESSO":"DCX OS // FALHA DE INICIALIZAÇÃO");return false}
+      await syncExistingPlayers();renderAll();heartbeatInterval=setInterval(renderMaster,5000);toast("DCX OS A2.2.1 // SINCRONIZADO");return true;
+    }catch(e){
+      console.error("DCX Admin init",e);initialized=false;
+      setDiag("dcxMasterSync",`DCX ADMIN // ${e?.code||"ERRO"}`,false);
+      toast(`DCX OS // ${e?.code||"FALHA DE INICIALIZAÇÃO"}`);return false
+    }
   }
   function renderAll(){renderTabs();if(activeTab==="master")renderMaster();if(activeTab==="players")renderPlayers();if(activeTab==="teams")renderTeams();if(activeTab==="notes")renderNotes()}
   function copyPlayerLink(){const input=$("playerUrl");if(!input)return;navigator.clipboard?.writeText(input.value).then(()=>toast("LINK COPIADO")).catch(()=>{input.select();document.execCommand("copy");toast("LINK COPIADO")})}

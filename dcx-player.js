@@ -1,6 +1,6 @@
 window.DCX = window.DCX || {};
 (() => {
-  const BUILD="DCX-OS-A2-RECOVERY";
+  const BUILD="DCX-OS-A2.2-AUTH-ISOLATION";
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   let room=new URLSearchParams(location.search).get("room")||localStorage.getItem("oph-room")||window.OPH_CONFIG?.defaultRoom||"FRIA-01";
@@ -17,7 +17,8 @@ window.DCX = window.DCX || {};
   function touch(){lastInteraction=Date.now()}
   function accessStorageKey(){return `dcx-access-key-${room}`}
   function setGate(show,msg=""){const g=$("dcxAccessGate");if(!g)return;g.classList.toggle("hidden",!show);document.body.classList.toggle("dcxAccessLocked",!!show);if($("dcxAccessStatus"))$("dcxAccessStatus").textContent=msg;if(show){const saved=localStorage.getItem("oph-name")||"";if($("dcxAccessName")&&!$("dcxAccessName").value)$("dcxAccessName").value=saved;setTimeout(()=>$("dcxAccessName")?.focus(),60)}}
-  async function ensureFirebase(){if(!window.OPH_CONFIG?.firebase?.enabled)return false;if(!window.firebase)throw new Error("Firebase SDK indisponível");if(!firebase.apps.length)firebase.initializeApp(window.OPH_CONFIG.firebase);const auth=firebase.auth();if(!auth.currentUser)await auth.signInAnonymously();db=firebase.database();uid=auth.currentUser.uid;return true}
+  function playerApp(){try{return firebase.app("OPH_PLAYER")}catch(e){return firebase.initializeApp(window.OPH_CONFIG.firebase,"OPH_PLAYER")}}
+  async function ensureFirebase(){if(!window.OPH_CONFIG?.firebase?.enabled)return false;if(!window.firebase)throw new Error("Firebase SDK indisponível");const app=playerApp(),auth=app.auth();try{await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION)}catch(e){}if(auth.currentUser&&!auth.currentUser.isAnonymous){try{await auth.signOut()}catch(e){}}if(!auth.currentUser)await auth.signInAnonymously();db=app.database();uid=auth.currentUser.uid;return true}
   async function readPublicAccess(){try{return (await ref("access/public").once("value")).val()||{requireKey:false,allowNewPlayers:true}}catch(e){console.warn("access public",e);return{requireKey:false,allowNewPlayers:true}}}
   async function validateSavedKey(code){if(!code)return false;try{const s=await ref(`access/invitations/${code}`).once("value"),v=s.val();return !!(v&&v.enabled!==false)}catch(e){return false}}
   async function blocked(pid){if(!pid)return false;try{const s=await ref(`access/blockedPlayers/${pid}`).once("value");return !!s.val()?.blocked}catch(e){return false}}
@@ -38,7 +39,7 @@ window.DCX = window.DCX || {};
   async function heartbeat(){if(!connected||!uid||!playerId)return;try{await ref(`presence/${uid}`).set({uid,playerId,name,build:BUILD,visibility:document.visibilityState,focused:document.hasFocus(),lastInteraction,lastSeen:now()})}catch(e){console.warn("heartbeat",e)}}
   async function claimAccess(){const code=localStorage.getItem(accessStorageKey())||"";if(!code||!uid||!playerId)return;try{await ref(`access/claims/${uid}`).set({uid,key:code,playerId,name,ts:now(),build:BUILD})}catch(e){console.warn("claim",e)}}
   async function init(force=false){
-    try{if(!window.firebase?.apps?.length||!firebase.auth().currentUser)return false;const target=window.OPH?.Realtime?.getRoom?.()||room;if(initialized&&!force&&target===room)return true;refs.forEach(r=>{try{r.off()}catch(e){}});refs=[];clearInterval(heartbeatTimer);initialized=false;connected=false;db=firebase.database();uid=firebase.auth().currentUser.uid;room=target;const i=identity();if(!i){console.warn("DCX Player: identidade ainda não disponível");return false}playerId=i.playerId;name=i.name;if(await blocked(playerId)){setGate(true,"ACESSO BLOQUEADO PELO KEYMASTER");return false}
+    try{const rt=window.OPH?.Realtime,rtAuth=rt?.getFirebaseAuth?.(),rtDb=rt?.getFirebaseDatabase?.();if(!rtAuth?.currentUser||!rtDb)return false;const target=rt?.getRoom?.()||room;if(initialized&&!force&&target===room)return true;refs.forEach(r=>{try{r.off()}catch(e){}});refs=[];clearInterval(heartbeatTimer);initialized=false;connected=false;db=rtDb;uid=rtAuth.currentUser.uid;room=target;const i=identity();if(!i){console.warn("DCX Player: identidade ainda não disponível");return false}playerId=i.playerId;name=i.name;if(await blocked(playerId)){setGate(true,"ACESSO BLOQUEADO PELO KEYMASTER");return false}
       connected=true;const tr=ref("teams"),or=ref("operators"),nr=ref(`notes/${playerId}`);tr.on("value",s=>{teams=s.val()||{};renderTeams()});or.on("value",s=>{operators=s.val()||{};const newName=operators[playerId]?.identity?.name;if(newName&&newName!==name){name=newName;localStorage.setItem("oph-name",newName);if($("name"))$("name").value=newName}renderTeams()});nr.on("value",s=>{notes=s.val()||{};renderNotes()});refs.push(tr,or,nr);await heartbeat();await claimAccess();heartbeatTimer=setInterval(heartbeat,20000);return true;
     }catch(e){console.error("DCX Player init",e);return false}
   }
