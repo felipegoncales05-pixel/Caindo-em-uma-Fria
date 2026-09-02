@@ -1,7 +1,7 @@
 window.OPH = window.OPH || {};
-console.info("[DCX OS] A2.2 AUTH ISOLATION // KEYMASTER // YUMIYA CORE FINAL-11");
+console.info("[DCX OS] YUMIYA REACTION SYNC V2 // CLEAR EPOCH FIX");
 (() => {
-  let state=OPH.cloneDefault(),stateLoaded=false,timelineSyncing=false,suppressTimelineSync=false,renderDeferred=false,room=new URLSearchParams(location.search).get("room")||window.OPH_CONFIG.defaultRoom||"FRIA-01",requests={},selectedChat=null,selectedProfileUid="";
+  let state=OPH.cloneDefault(),stateLoaded=false,timelineSyncing=false,suppressTimelineSync=false,renderDeferred=false,room=new URLSearchParams(location.search).get("room")||window.OPH_CONFIG.defaultRoom||"FRIA-01",requests={},selectedChat=null,selectedProfileUid="",reactionDraftGlobal=null,reactionDraftProfiles={};
   const $=id=>document.getElementById(id);
   function toast(t){const e=$("toast");e.textContent=t;e.classList.add("show");setTimeout(()=>e.classList.remove("show"),1600)}
   function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
@@ -116,9 +116,12 @@ console.info("[DCX OS] A2.2 AUTH ISOLATION // KEYMASTER // YUMIYA CORE FINAL-11"
   function playerCanonicalId(item){return String(item?.msg?.clientMessageId||(`request-${item?.uid||"unknown"}-${item?.id||"unknown"}`))}
   function appendIncomingCanonical(item){
     if(!item?.msg)return false;
+    const msgTs=Number(item.msg.serverTs)||Number(item.msg.ts)||Number(item.msg.clientTs)||Date.now();
+    // Nunca ressuscita mensagem anterior ao último LIMPAR TUDO.
+    if((Number(state.comms?.clearedAt)||0) && msgTs <= Number(state.comms.clearedAt))return false;
     const cid=playerCanonicalId(item);
     if(timeline().some(e=>e.kind==="player"&&(e.clientMessageId===cid||e.id===`player:${cid}`)))return false;
-    timeline().push({id:`player:${cid}`,kind:"player",seq:nextSeq(),uid:item.uid,requestId:item.id,playerId:item.msg.playerId||"",nickname:item.msg.nickname||"Jogador",text:item.msg.text||"",clientMessageId:cid,clientTs:Number(item.msg.clientTs)||0,serverTs:Number(item.msg.serverTs)||Number(item.msg.ts)||Date.now(),ts:Number(item.msg.serverTs)||Number(item.msg.ts)||Date.now()});
+    timeline().push({id:`player:${cid}`,kind:"player",seq:nextSeq(),uid:item.uid,requestId:item.id,playerId:item.msg.playerId||"",nickname:item.msg.nickname||"Jogador",text:item.msg.text||"",clientMessageId:cid,clientTs:Number(item.msg.clientTs)||0,serverTs:msgTs,ts:msgTs});
     state.comms.timeline=timeline().slice(-500);
     return true;
   }
@@ -216,44 +219,28 @@ console.info("[DCX OS] A2.2 AUTH ISOLATION // KEYMASTER // YUMIYA CORE FINAL-11"
     }).join(""):`<div class="card"><p>Nada arquivado. O arquivo é local deste navegador do Keymaster e não é enviado aos jogadores.</p></div>`;
   }
   function clampMood(v){return Math.max(0,Math.min(100,Math.round(Number(v)||0)))}
-  function renderAffect(){
-    const a=state.comms.affect||{anger:12,tension:18,euphoria:10,portrait:"normal"};
-    const anger=clampMood(a.anger),tension=clampMood(a.tension),euphoria=clampMood(a.euphoria),portrait=["normal","fear","embarrassed","anger","happy"].includes(a.portrait)?a.portrait:"normal";
-    syncValue($("yumiyaAngerCtl"),anger);
-    syncValue($("yumiyaTensionCtl"),tension);
-    syncValue($("yumiyaEuphoriaCtl"),euphoria);
-    if($("yumiyaAngerValue"))$("yumiyaAngerValue").textContent=anger+"%";
-    if($("yumiyaTensionValue"))$("yumiyaTensionValue").textContent=tension+"%";
-    if($("yumiyaEuphoriaValue"))$("yumiyaEuphoriaValue").textContent=euphoria+"%";
-    document.querySelectorAll("#yumiyaPortraitCtl [data-portrait]").forEach(b=>b.classList.toggle("gold",b.dataset.portrait===portrait));
+  function reactionShape(src,extra={}){
+    const base=src||{};
+    return {
+      enabled:base.enabled!==false,
+      anger:clampMood(base.anger ?? 12),
+      tension:clampMood(base.tension ?? 18),
+      euphoria:clampMood(base.euphoria ?? 10),
+      portrait:["normal","fear","embarrassed","anger","happy"].includes(base.portrait)?base.portrait:"normal",
+      preset:base.preset||extra.preset||"standard",
+      tone:base.tone||extra.tone||"professional",
+      updatedAt:Number(base.updatedAt)||Date.now()
+    };
   }
-  function previewMood(kind,value){
-    const v=clampMood(value),ids={anger:"yumiyaAngerValue",tension:"yumiyaTensionValue",euphoria:"yumiyaEuphoriaValue"},out=$(ids[kind]);
-    if(out)out.textContent=v+"%";
-  }
-  async function setMood(kind,value){
-    if(!["anger","tension","euphoria"].includes(kind))return;
-    state.comms.affect=Object.assign({anger:12,tension:18,euphoria:10,portrait:"normal"},state.comms.affect||{});
-    state.comms.affect[kind]=clampMood(value);
-    await save();
-  }
-  async function setPortrait(portrait){
-    if(!["normal","fear","embarrassed","anger","happy"].includes(portrait))return;
-    state.comms.affect=Object.assign({anger:12,tension:18,euphoria:10,portrait:"normal"},state.comms.affect||{});
-    state.comms.affect.portrait=portrait;
-    await save();
-    toast("PORTRAIT // "+portrait.toUpperCase());
-  }
-  function selectedProfileContact(){
-    const contacts=getContacts();
-    if(selectedProfileUid&&contacts[selectedProfileUid])return contacts[selectedProfileUid];
-    return null;
+  function globalReactionDraft(){
+    if(!reactionDraftGlobal)reactionDraftGlobal=reactionShape(state.comms?.affect||{});
+    return reactionDraftGlobal;
   }
   function profileKey(contact){return contact?.playerId||""}
   function defaultOperatorProfile(contact){
-    const base=state.comms.affect||{anger:12,tension:18,euphoria:10,portrait:"normal"};
+    const base=globalReactionDraft();
     const isKang=/^kang(?:\s|$)/i.test(contact?.name||"");
-    return {enabled:true,preset:isKang?"kang":"standard",tone:isKang?"provocative":"professional",anger:clampMood(base.anger),tension:clampMood(base.tension),euphoria:clampMood(base.euphoria),portrait:base.portrait||"normal",updatedAt:Date.now()};
+    return reactionShape({enabled:true,preset:isKang?"kang":"standard",tone:isKang?"provocative":"professional",anger:base.anger,tension:base.tension,euphoria:base.euphoria,portrait:base.portrait||"normal"});
   }
   function getOperatorProfile(contact,create=false){
     const key=profileKey(contact);if(!key)return null;
@@ -261,57 +248,71 @@ console.info("[DCX OS] A2.2 AUTH ISOLATION // KEYMASTER // YUMIYA CORE FINAL-11"
     if(!state.comms.operatorProfiles[key]&&create)state.comms.operatorProfiles[key]=defaultOperatorProfile(contact);
     return state.comms.operatorProfiles[key]||null;
   }
+  function getProfileDraft(contact,create=false){
+    const key=profileKey(contact);if(!key)return null;
+    if(!reactionDraftProfiles[key]&&create){
+      const current=getOperatorProfile(contact,false);
+      reactionDraftProfiles[key]=reactionShape(current||defaultOperatorProfile(contact));
+    }
+    return reactionDraftProfiles[key]||null;
+  }
+  function renderAffect(){
+    const a=globalReactionDraft();
+    const anger=clampMood(a.anger),tension=clampMood(a.tension),euphoria=clampMood(a.euphoria),portrait=a.portrait;
+    syncValue($("yumiyaAngerCtl"),anger);syncValue($("yumiyaTensionCtl"),tension);syncValue($("yumiyaEuphoriaCtl"),euphoria);
+    if($("yumiyaAngerValue"))$("yumiyaAngerValue").textContent=anger+"%";
+    if($("yumiyaTensionValue"))$("yumiyaTensionValue").textContent=tension+"%";
+    if($("yumiyaEuphoriaValue"))$("yumiyaEuphoriaValue").textContent=euphoria+"%";
+    document.querySelectorAll("#yumiyaPortraitCtl [data-portrait]").forEach(b=>b.classList.toggle("gold",b.dataset.portrait===portrait));
+  }
+  function previewMood(kind,value){const v=clampMood(value),ids={anger:"yumiyaAngerValue",tension:"yumiyaTensionValue",euphoria:"yumiyaEuphoriaValue"},out=$(ids[kind]);if(out)out.textContent=v+"%"}
+  async function setMood(kind,value){
+    if(!["anger","tension","euphoria"].includes(kind))return;
+    globalReactionDraft()[kind]=clampMood(value);
+    // Draft local: só vai ao Firebase junto da próxima fala.
+  }
+  async function setPortrait(portrait){
+    if(!["normal","fear","embarrassed","anger","happy"].includes(portrait))return;
+    globalReactionDraft().portrait=portrait;renderAffect();toast("PRÓXIMA FALA // "+portrait.toUpperCase());
+  }
+  function selectedProfileContact(){const contacts=getContacts();if(selectedProfileUid&&contacts[selectedProfileUid])return contacts[selectedProfileUid];return null}
   function renderOperatorProfiles(){
     const select=$("operatorProfileSelect");if(!select)return;
-    const contacts=getContacts();
-    const current=selectedProfileUid||select.value||"";
+    const contacts=getContacts(),current=selectedProfileUid||select.value||"";
     const sorted=Object.values(contacts).filter(c=>c.playerId).sort((a,b)=>(+b.lastSeen||0)-(+a.lastSeen||0));
     const operatorItems=[{value:"",label:"SELECIONE UM OPERADOR"},...sorted.map(c=>({value:c.uid,label:`${c.name} // ${c.playerId}`}))];
     const operatorPreferred=operatorItems.some(x=>x.value===current)?current:"";syncSelect(select,operatorItems,operatorPreferred);
-    if(operatorPreferred)selectedProfileUid=operatorPreferred;else if(current&&!focused(select))selectedProfileUid=""
-    const contact=selectedProfileContact();
-    const body=$("operatorProfileBody"),enabled=$("operatorProfileEnabled"),status=$("operatorProfileStatus");
-    if(!contact){
-      body?.classList.add("disabled");if(enabled){syncCheck(enabled,false);enabled.disabled=true}if(status){status.textContent="SEM OPERADOR";status.classList.remove("active")};return;
-    }
+    if(operatorPreferred)selectedProfileUid=operatorPreferred;else if(current&&!focused(select))selectedProfileUid="";
+    const contact=selectedProfileContact(),body=$("operatorProfileBody"),enabled=$("operatorProfileEnabled"),status=$("operatorProfileStatus");
+    if(!contact){body?.classList.add("disabled");if(enabled){syncCheck(enabled,false);enabled.disabled=true}if(status){status.textContent="SEM OPERADOR";status.classList.remove("active")};return}
     if(enabled)enabled.disabled=false;
-    const p=getOperatorProfile(contact,false);
-    const active=!!p?.enabled;
-    syncCheck(enabled,active);
-    body?.classList.toggle("disabled",!active);
+    const server=getOperatorProfile(contact,false),draft=getProfileDraft(contact,false),view=draft||server;
+    const active=!!view?.enabled;
+    syncCheck(enabled,active);body?.classList.toggle("disabled",!active);
     if(status){status.textContent=active?`EXCLUSIVO // ${contact.name}`:`GLOBAL // ${contact.name}`;status.classList.toggle("active",active)}
-    const base=state.comms.affect||{anger:12,tension:18,euphoria:10,portrait:"normal"};
-    const view=Object.assign({preset:"standard",tone:"professional",anger:base.anger,tension:base.tension,euphoria:base.euphoria,portrait:base.portrait||"normal"},p||{});
-    syncValue($("operatorPreset"),["standard","kang"].includes(view.preset)?view.preset:"standard");
-    syncValue($("operatorTone"),["professional","warm","provocative","cold","hostile"].includes(view.tone)?view.tone:"professional");
-    const anger=clampMood(view.anger),tension=clampMood(view.tension),euphoria=clampMood(view.euphoria);
+    const base=globalReactionDraft();
+    const shown=Object.assign({preset:"standard",tone:"professional",anger:base.anger,tension:base.tension,euphoria:base.euphoria,portrait:base.portrait||"normal"},view||{});
+    syncValue($("operatorPreset"),["standard","kang"].includes(shown.preset)?shown.preset:"standard");
+    syncValue($("operatorTone"),["professional","warm","provocative","cold","hostile"].includes(shown.tone)?shown.tone:"professional");
+    const anger=clampMood(shown.anger),tension=clampMood(shown.tension),euphoria=clampMood(shown.euphoria);
     syncValue($("operatorAngerCtl"),anger);syncValue($("operatorTensionCtl"),tension);syncValue($("operatorEuphoriaCtl"),euphoria);
     if($("operatorAngerValue"))$("operatorAngerValue").textContent=anger+"%";if($("operatorTensionValue"))$("operatorTensionValue").textContent=tension+"%";if($("operatorEuphoriaValue"))$("operatorEuphoriaValue").textContent=euphoria+"%";
-    document.querySelectorAll("#operatorPortraitCtl [data-portrait]").forEach(b=>b.classList.toggle("gold",b.dataset.portrait===(view.portrait||"normal")));
-    if($("operatorAssetHint"))$("operatorAssetHint").textContent=view.preset==="kang"?"Kang procura yumiya-kang-normal/medo/envergonhada/raiva/feliz.png e cai nos portraits padrão se não encontrar.":"Preset padrão usa os cinco portraits atuais da Yumiya.";
+    document.querySelectorAll("#operatorPortraitCtl [data-portrait]").forEach(b=>b.classList.toggle("gold",b.dataset.portrait===(shown.portrait||"normal")));
+    if($("operatorAssetHint"))$("operatorAssetHint").textContent=shown.preset==="kang"?"Kang procura yumiya-kang-normal/medo/envergonhada/raiva/feliz.png e cai nos portraits padrão se não encontrar.":"Preset padrão usa os cinco portraits atuais da Yumiya.";
   }
   function selectOperatorProfile(uid){selectedProfileUid=uid||"";renderOperatorProfiles()}
   async function toggleOperatorProfile(on){
     const contact=selectedProfileContact();if(!contact){toast("SELECIONE UM OPERADOR");return}
-    const key=profileKey(contact);if(!key){toast("OPERADOR SEM P-ID");return}
-    const p=getOperatorProfile(contact,true);p.enabled=!!on;p.updatedAt=Date.now();await save();toast(on?"PERFIL INDIVIDUAL ATIVADO":"OPERADOR VOLTOU AO GLOBAL");
+    const p=getProfileDraft(contact,true);p.enabled=!!on;p.updatedAt=Date.now();
+    // Só a flag estrutural é persistida agora; valores preparados continuam locais até a fala.
+    const server=getOperatorProfile(contact,true);server.enabled=!!on;server.updatedAt=Date.now();await save();toast(on?"PERFIL INDIVIDUAL ATIVADO":"OPERADOR VOLTOU AO GLOBAL");
   }
   function previewOperatorMood(kind,value){const v=clampMood(value),ids={anger:"operatorAngerValue",tension:"operatorTensionValue",euphoria:"operatorEuphoriaValue"},out=$(ids[kind]);if(out)out.textContent=v+"%"}
-  async function setOperatorMood(kind,value){
-    if(!["anger","tension","euphoria"].includes(kind))return;const contact=selectedProfileContact();if(!contact)return;const p=getOperatorProfile(contact,true);p.enabled=true;p[kind]=clampMood(value);p.updatedAt=Date.now();await save();
-  }
-  async function setOperatorPortrait(portrait){
-    if(!["normal","fear","embarrassed","anger","happy"].includes(portrait))return;const contact=selectedProfileContact();if(!contact)return;const p=getOperatorProfile(contact,true);p.enabled=true;p.portrait=portrait;p.updatedAt=Date.now();await save();toast(`PORTRAIT INDIVIDUAL // ${contact.name.toUpperCase()}`);
-  }
-  async function setOperatorPreset(preset){
-    if(!["standard","kang"].includes(preset))return;const contact=selectedProfileContact();if(!contact)return;const p=getOperatorProfile(contact,true);p.enabled=true;p.preset=preset;p.updatedAt=Date.now();if(preset==="kang"&&p.tone==="professional")p.tone="provocative";await save();toast(`PRESET // ${preset.toUpperCase()}`);
-  }
-  async function setOperatorTone(tone){
-    if(!["professional","warm","provocative","cold","hostile"].includes(tone))return;const contact=selectedProfileContact();if(!contact)return;const p=getOperatorProfile(contact,true);p.enabled=true;p.tone=tone;p.updatedAt=Date.now();await save();toast(`TOM // ${tone.toUpperCase()}`);
-  }
-  async function resetOperatorProfile(){
-    const contact=selectedProfileContact();if(!contact)return;const key=profileKey(contact);if(!key)return;state.comms.operatorProfiles=state.comms.operatorProfiles||{};delete state.comms.operatorProfiles[key];await save();toast(`${contact.name.toUpperCase()} // PERFIL GLOBAL`);
-  }
+  async function setOperatorMood(kind,value){if(!["anger","tension","euphoria"].includes(kind))return;const c=selectedProfileContact();if(!c)return;const p=getProfileDraft(c,true);p.enabled=true;p[kind]=clampMood(value);p.updatedAt=Date.now()}
+  async function setOperatorPortrait(portrait){if(!["normal","fear","embarrassed","anger","happy"].includes(portrait))return;const c=selectedProfileContact();if(!c)return;const p=getProfileDraft(c,true);p.enabled=true;p.portrait=portrait;p.updatedAt=Date.now();renderOperatorProfiles();toast(`PRÓXIMA FALA // ${c.name.toUpperCase()} // ${portrait.toUpperCase()}`)}
+  async function setOperatorPreset(preset){if(!["standard","kang"].includes(preset))return;const c=selectedProfileContact();if(!c)return;const p=getProfileDraft(c,true);p.enabled=true;p.preset=preset;p.updatedAt=Date.now();if(preset==="kang"&&p.tone==="professional")p.tone="provocative";renderOperatorProfiles()}
+  async function setOperatorTone(tone){if(!["professional","warm","provocative","cold","hostile"].includes(tone))return;const c=selectedProfileContact();if(!c)return;const p=getProfileDraft(c,true);p.enabled=true;p.tone=tone;p.updatedAt=Date.now();renderOperatorProfiles()}
+  async function resetOperatorProfile(){const c=selectedProfileContact();if(!c)return;const key=profileKey(c);if(!key)return;delete reactionDraftProfiles[key];state.comms.operatorProfiles=state.comms.operatorProfiles||{};delete state.comms.operatorProfiles[key];await save();toast(`${c.name.toUpperCase()} // PERFIL GLOBAL`)}
   function renderEvents(){
     $("emLevel").value=state.emergency.level||0;$("emLevelLabel").textContent=OPH.EMERGENCY_STATES[state.emergency.level||0].title;
   }
@@ -369,36 +370,29 @@ console.info("[DCX OS] A2.2 AUTH ISOLATION // KEYMASTER // YUMIYA CORE FINAL-11"
     saveArchive([]);renderArchive();toast("ARQUIVO PRIVADO LIMPO");
   }
   async function clearAllChat(){
-    if(!confirm("LIMPAR A PORRA TODA?\n\nIsso apaga o chat ativo da Yumiya, as entradas pendentes dos jogadores e faz os clientes esconderem/apagarem o histórico local anterior. O ARQUIVO PRIVADO será preservado."))return;
-    const clearedAt=Date.now();
+    if(!confirm("LIMPAR A PORRA TODA?\n\nIsso apaga a timeline inteira da Yumiya e as mensagens antigas dos jogadores. O ARQUIVO PRIVADO será preservado."))return;
     suppressTimelineSync=true;
-    state.comms.messages=[];state.comms.timeline=[];state.comms.sequence=0;state.comms.clearVersion=(Number(state.comms.clearVersion)||0)+1;state.comms.clearedAt=clearedAt;state.comms.processing={active:false,targetUid:"all",targetPlayerId:"",label:"PROCESSANDO SOLICITAÇÃO...",until:0};
-    selectedChat=null;
     const pendingBeforeClear=chatRequests();
-    await save();
     try{
+      // Primeiro remove a fonte das mensagens do jogador; só depois publica a timeline vazia.
       if(OPH.Realtime.getMode()==="ws")await Promise.all(pendingBeforeClear.map(x=>OPH.Realtime.clearChat(x.uid,x.id)));
       else await OPH.Realtime.clearAllChats();
-    }catch(e){console.error(e)}
+    }catch(e){console.error("Falha limpando requests/chat",e)}
     const next={};for(const [uid,node] of Object.entries(requests||{})){const copy=Object.assign({},node);delete copy.chat;if(Object.keys(copy).length)next[uid]=copy}requests=next;
-    suppressTimelineSync=false;
-    renderChat();toast("CHAT ATIVO LIMPO");
+    const clearedAt=Date.now();
+    state.comms.messages=[];state.comms.timeline=[];state.comms.sequence=0;state.comms.clearVersion=(Number(state.comms.clearVersion)||0)+1;state.comms.clearedAt=clearedAt;state.comms.processing={active:false,targetUid:"all",targetPlayerId:"",label:"PROCESSANDO SOLICITAÇÃO...",until:0};
+    selectedChat=null;
+    await save();
+    // Mantém o bloqueio por um tick extra para snapshots atrasados de requests não ressuscitarem mensagens antigas.
+    setTimeout(()=>{suppressTimelineSync=false;renderChat()},250);
+    toast("TIMELINE INTEIRA LIMPA");
   }
 
   function reactionSnapshotFor(targetUid,contact){
-    const base=Object.assign({anger:12,tension:18,euphoria:10,portrait:"normal"},state.comms?.affect||{});
-    const normalize=(src,extra={})=>({
-      anger:clampMood(src?.anger ?? base.anger),
-      tension:clampMood(src?.tension ?? base.tension),
-      euphoria:clampMood(src?.euphoria ?? base.euphoria),
-      portrait:["normal","fear","embarrassed","anger","happy"].includes(src?.portrait)?src.portrait:(base.portrait||"normal"),
-      preset:src?.preset||extra.preset||"standard",
-      tone:src?.tone||extra.tone||"professional",
-      exclusive:!!extra.exclusive,
-      updatedAt:Date.now()
-    });
-    if(targetUid!=="all" && contact?.playerId){
-      const profile=state.comms?.operatorProfiles?.[contact.playerId];
+    const base=globalReactionDraft();
+    const normalize=(src,extra={})=>({anger:clampMood(src?.anger ?? base.anger),tension:clampMood(src?.tension ?? base.tension),euphoria:clampMood(src?.euphoria ?? base.euphoria),portrait:["normal","fear","embarrassed","anger","happy"].includes(src?.portrait)?src.portrait:(base.portrait||"normal"),preset:src?.preset||extra.preset||"standard",tone:src?.tone||extra.tone||"professional",exclusive:!!extra.exclusive,updatedAt:Date.now()});
+    if(targetUid!=="all"&&contact?.playerId){
+      const draft=getProfileDraft(contact,false),server=state.comms?.operatorProfiles?.[contact.playerId],profile=draft||server;
       if(profile?.enabled)return normalize(profile,{exclusive:true,preset:profile.preset||"standard",tone:profile.tone||"professional"});
     }
     return normalize(base,{exclusive:false,preset:"standard",tone:"professional"});
@@ -427,8 +421,19 @@ console.info("[DCX OS] A2.2 AUTH ISOLATION // KEYMASTER // YUMIYA CORE FINAL-11"
     // A reação entregue e a fala entram no MESMO state.set(). O player só usa estes snapshots entregues,
     // portanto mexer nos sliders/portrait no Keymaster não antecipa visualmente a reação.
     state.comms.deliveredOperatorProfiles=state.comms.deliveredOperatorProfiles||{};
-    if(targetUid==="all") state.comms.deliveredAffect=Object.assign({},reaction);
-    else if(targetPlayerId) state.comms.deliveredOperatorProfiles[targetPlayerId]=Object.assign({},reaction);
+    // Persiste a preparação somente AGORA, no mesmo write da fala entregue.
+    if(targetUid==="all"){
+      state.comms.affect={anger:reaction.anger,tension:reaction.tension,euphoria:reaction.euphoria,portrait:reaction.portrait};
+      state.comms.deliveredAffect=Object.assign({},reaction);
+      reactionDraftGlobal=reactionShape(state.comms.affect);
+    }else if(targetPlayerId){
+      state.comms.deliveredOperatorProfiles[targetPlayerId]=Object.assign({},reaction);
+      if(reaction.exclusive){
+        state.comms.operatorProfiles=state.comms.operatorProfiles||{};
+        state.comms.operatorProfiles[targetPlayerId]=Object.assign({enabled:true},reaction);
+        reactionDraftProfiles[targetPlayerId]=reactionShape(state.comms.operatorProfiles[targetPlayerId]);
+      }
+    }
     timeline().push(msg);state.comms.timeline=timeline().slice(-500);
     // Compatibilidade temporária com clients antigos; FINAL-11 usa timeline.
     state.comms.messages=[...(state.comms.messages||[]),msg].slice(-120);

@@ -156,7 +156,7 @@ console.info("[DCX OS] A2.2 AUTH ISOLATION // PLAYER // YUMIYA CORE FINAL-11");
       const img=new Image();
       img.onload=()=>{portrait.style.setProperty("--yumiyaPortrait",`url('${src}')`);portrait.classList.add("hasPortrait")};
       img.onerror=tryNext;
-      img.src=src+"?v=FINAL11";
+      img.src=src+"?v=YRX2";
     };
     tryNext();
   }
@@ -338,13 +338,18 @@ console.info("[DCX OS] A2.2 AUTH ISOLATION // PLAYER // YUMIYA CORE FINAL-11");
   function canonicalTimelineForMe(){
     const identity=getYumiyaIdentity(),pid=identity?.playerId||"";
     const timeline=Array.isArray(state.comms?.timeline)?state.comms.timeline:[];
+    const clearedAt=Number(state.comms?.clearedAt)||0;
     return timeline.filter(ev=>{
+      const eventTs=Number(ev?.serverTs||ev?.ts||ev?.clientTs)||0;
+      if(clearedAt&&eventTs&&eventTs<=clearedAt)return false;
       if(ev?.kind==="player")return !!pid && ev.playerId===pid;
       if(ev?.kind==="yumiya")return ev.targetUid==="all" || !ev.targetUid || (playerUid&&ev.targetUid===playerUid) || (!!pid&&ev.targetPlayerId===pid);
       return false;
     }).slice().sort((a,b)=>(Number(a.seq)||0)-(Number(b.seq)||0));
   }
   function buildYumiyaTimeline(local){
+    const clearedAt=Number(state.comms?.clearedAt)||0;
+    local=(local||[]).filter(m=>!clearedAt || (Number(m.clientTs||m.ts)||0)>clearedAt);
     const canonical=canonicalTimelineForMe();
     if(canonical.length){
       const confirmedIds=new Set(canonical.filter(e=>e.kind==="player").map(e=>e.clientMessageId||e.id).filter(Boolean));

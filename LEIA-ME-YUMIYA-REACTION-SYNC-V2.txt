@@ -1,0 +1,18 @@
+YUMIYA REACTION SYNC V2 + CLEAR EPOCH FIX
+
+Substitua no GitHub:
+- index.html
+- keymaster.html
+- keymaster.js
+- player.js
+
+NAO altera Firebase Rules, UID, Authentication, realtime.js ou estrutura DCX.
+
+Correcoes:
+1. Reacao da Yumiya fica local no Keymaster ate TRANSMITIR.
+2. Mensagem + portrait + raiva + tensao + euforia + preset + tom saem no mesmo state write.
+3. LIMPAR A PORRA TODA remove primeiro requests/chat e depois publica timeline vazia.
+4. Mensagens com timestamp anterior ao clearedAt nunca podem voltar para timeline.
+5. Player filtra ecos locais/canonicos anteriores ao ultimo clear.
+
+Cache-buster: YRX2
