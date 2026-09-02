@@ -38,7 +38,10 @@ OPH.DEFAULT_STATE = {
     clearedAt: 0,
     processing: { active:false, targetUid:"all", targetPlayerId:"", label:"PROCESSANDO SOLICITAÇÃO...", until:0 },
     affect: { anger:12, tension:18, euphoria:10, portrait:"normal" },
-    operatorProfiles: {}
+    operatorProfiles: {},
+    // Reaction Sync: estes snapshots representam somente reações que já foram entregues junto de uma fala da Yumiya.
+    deliveredAffect: { anger:12, tension:18, euphoria:10, portrait:"normal", preset:"standard", tone:"professional", exclusive:false, updatedAt:0 },
+    deliveredOperatorProfiles: {}
   },
   event: null,
   updatedAt: Date.now()

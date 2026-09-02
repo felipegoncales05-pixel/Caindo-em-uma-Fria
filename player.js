@@ -105,19 +105,35 @@ console.info("[DCX OS] A2.2 AUTH ISOLATION // PLAYER // YUMIYA CORE FINAL-11");
     const profile=state.comms?.operatorProfiles?.[identity.playerId];
     return profile?.enabled?profile:null;
   }
-  function effectiveAffect(){
-    const base=Object.assign({anger:12,tension:18,euphoria:10,portrait:"normal"},state.comms?.affect||{});
-    const profile=operatorProfile();
-    if(!profile)return Object.assign(base,{preset:"standard",tone:"professional",exclusive:false});
+  function normalizeDeliveredReaction(src){
+    if(!src)return null;
     return {
-      anger:profile.anger ?? base.anger,
-      tension:profile.tension ?? base.tension,
-      euphoria:profile.euphoria ?? base.euphoria,
-      portrait:profile.portrait || base.portrait || "normal",
-      preset:profile.preset || "standard",
-      tone:profile.tone || "professional",
-      exclusive:true
+      anger:src.anger ?? 12, tension:src.tension ?? 18, euphoria:src.euphoria ?? 10,
+      portrait:src.portrait || "normal", preset:src.preset || "standard",
+      tone:src.tone || "professional", exclusive:!!src.exclusive, updatedAt:Number(src.updatedAt)||0
     };
+  }
+  function latestMessageReactionForMe(){
+    const identity=getYumiyaIdentity(),pid=identity?.playerId||"";
+    const list=(Array.isArray(state.comms?.timeline)?state.comms.timeline:[]).filter(ev=>{
+      if(ev?.kind!=="yumiya"||!ev.reaction)return false;
+      return !ev.targetUid || ev.targetUid==="all" || (playerUid&&ev.targetUid===playerUid) || (!!pid&&ev.targetPlayerId===pid);
+    });
+    if(!list.length)return null;
+    list.sort((a,b)=>(Number(a.seq)||Number(a.ts)||0)-(Number(b.seq)||Number(b.ts)||0));
+    return normalizeDeliveredReaction(list[list.length-1].reaction);
+  }
+  function deliveredReactionFallback(){
+    const identity=getYumiyaIdentity(),pid=identity?.playerId||"";
+    const globalR=normalizeDeliveredReaction(state.comms?.deliveredAffect);
+    const personalR=pid?normalizeDeliveredReaction(state.comms?.deliveredOperatorProfiles?.[pid]):null;
+    if(personalR&&globalR)return personalR.updatedAt>=globalR.updatedAt?personalR:globalR;
+    return personalR||globalR;
+  }
+  function effectiveAffect(){
+    // Nunca usa mais o estado EDITÁVEL do Keymaster para renderizar ao vivo.
+    // A reação só muda quando uma fala da Yumiya traz um snapshot entregue no mesmo update.
+    return latestMessageReactionForMe() || deliveredReactionFallback() || {anger:12,tension:18,euphoria:10,portrait:"normal",preset:"standard",tone:"professional",exclusive:false};
   }
   function setupYumiyaPortrait(){renderYumiyaAffect()}
   function moodWord(v){return v<25?"BAIXA":v<55?"ELEVADA":v<80?"ALTA":"CRÍTICA"}
@@ -215,7 +231,9 @@ console.info("[DCX OS] A2.2 AUTH ISOLATION // PLAYER // YUMIYA CORE FINAL-11");
         clearVersion:Number(s?.comms?.clearVersion)||0,
         processing:Object.assign(d.comms.processing,s?.comms?.processing||{}),
         affect:Object.assign(d.comms.affect,s?.comms?.affect||{}),
-        operatorProfiles:Object.assign({},d.comms.operatorProfiles||{},s?.comms?.operatorProfiles||{})
+        operatorProfiles:Object.assign({},d.comms.operatorProfiles||{},s?.comms?.operatorProfiles||{}),
+        deliveredAffect:Object.assign({},d.comms.deliveredAffect||{},s?.comms?.deliveredAffect||{}),
+        deliveredOperatorProfiles:Object.assign({},d.comms.deliveredOperatorProfiles||{},s?.comms?.deliveredOperatorProfiles||{})
       })
     });
   }

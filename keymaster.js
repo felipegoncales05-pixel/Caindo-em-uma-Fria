@@ -105,7 +105,9 @@ console.info("[DCX OS] A2.2 AUTH ISOLATION // KEYMASTER // YUMIYA CORE FINAL-11"
         clearVersion:Number(s?.comms?.clearVersion)||0,
         processing:Object.assign(d.comms.processing,s?.comms?.processing||{}),
         affect:Object.assign(d.comms.affect,s?.comms?.affect||{}),
-        operatorProfiles:Object.assign({},d.comms.operatorProfiles||{},s?.comms?.operatorProfiles||{})
+        operatorProfiles:Object.assign({},d.comms.operatorProfiles||{},s?.comms?.operatorProfiles||{}),
+        deliveredAffect:Object.assign({},d.comms.deliveredAffect||{},s?.comms?.deliveredAffect||{}),
+        deliveredOperatorProfiles:Object.assign({},d.comms.deliveredOperatorProfiles||{},s?.comms?.deliveredOperatorProfiles||{})
       })
     })
   }
@@ -382,6 +384,26 @@ console.info("[DCX OS] A2.2 AUTH ISOLATION // KEYMASTER // YUMIYA CORE FINAL-11"
     suppressTimelineSync=false;
     renderChat();toast("CHAT ATIVO LIMPO");
   }
+
+  function reactionSnapshotFor(targetUid,contact){
+    const base=Object.assign({anger:12,tension:18,euphoria:10,portrait:"normal"},state.comms?.affect||{});
+    const normalize=(src,extra={})=>({
+      anger:clampMood(src?.anger ?? base.anger),
+      tension:clampMood(src?.tension ?? base.tension),
+      euphoria:clampMood(src?.euphoria ?? base.euphoria),
+      portrait:["normal","fear","embarrassed","anger","happy"].includes(src?.portrait)?src.portrait:(base.portrait||"normal"),
+      preset:src?.preset||extra.preset||"standard",
+      tone:src?.tone||extra.tone||"professional",
+      exclusive:!!extra.exclusive,
+      updatedAt:Date.now()
+    });
+    if(targetUid!=="all" && contact?.playerId){
+      const profile=state.comms?.operatorProfiles?.[contact.playerId];
+      if(profile?.enabled)return normalize(profile,{exclusive:true,preset:profile.preset||"standard",tone:profile.tone||"professional"});
+    }
+    return normalize(base,{exclusive:false,preset:"standard",tone:"professional"});
+  }
+
   async function sendComms(){
     const text=$("chatReply").value.trim();if(!text){toast("ESCREVA UMA MENSAGEM");return}
     const targetUid=$("chatTarget").value||"all";
@@ -390,15 +412,23 @@ console.info("[DCX OS] A2.2 AUTH ISOLATION // KEYMASTER // YUMIYA CORE FINAL-11"
     const replyItem=selectedChat&&selectedChat.uid===targetUid?chatRequests().find(x=>x.uid===selectedChat.uid&&x.id===selectedChat.id):null;
     // Se for uma resposta, a pergunta entra primeiro na timeline canônica, no mesmo write do host.
     if(replyItem)appendIncomingCanonical(replyItem);
+    const reaction=reactionSnapshotFor(targetUid,contact);
+    const targetPlayerId=targetUid==="all"?"":(contact.playerId||replyItem?.msg?.playerId||"");
     const msg={
       id:crypto.randomUUID?.()||String(Date.now())+Math.random(),kind:"yumiya",seq:nextSeq(),sender:"YUMIYA KIRYUIN",text,style,targetUid,
-      targetPlayerId:targetUid==="all"?"":(contact.playerId||replyItem?.msg?.playerId||""),
+      targetPlayerId,
       targetName:targetUid==="all"?"GLOBAL":(contact.name||replyItem?.msg?.nickname||"OPERADOR"),
       replyToClientMessageId:replyItem?.msg?.clientMessageId||"",
       replyToRequestId:replyItem?.id||"",
       replyToPlayerTs:Number(replyItem?.msg?.clientTs||replyItem?.msg?.ts)||0,
+      reaction, reactionVersion:1,
       ts:Date.now()
     };
+    // A reação entregue e a fala entram no MESMO state.set(). O player só usa estes snapshots entregues,
+    // portanto mexer nos sliders/portrait no Keymaster não antecipa visualmente a reação.
+    state.comms.deliveredOperatorProfiles=state.comms.deliveredOperatorProfiles||{};
+    if(targetUid==="all") state.comms.deliveredAffect=Object.assign({},reaction);
+    else if(targetPlayerId) state.comms.deliveredOperatorProfiles[targetPlayerId]=Object.assign({},reaction);
     timeline().push(msg);state.comms.timeline=timeline().slice(-500);
     // Compatibilidade temporária com clients antigos; FINAL-11 usa timeline.
     state.comms.messages=[...(state.comms.messages||[]),msg].slice(-120);

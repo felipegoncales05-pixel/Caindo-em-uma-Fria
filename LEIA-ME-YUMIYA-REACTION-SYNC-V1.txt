@@ -1,0 +1,13 @@
+YUMIYA // REACTION SYNC V1
+
+Escopo isolado: reação visual + mensagem da Yumiya.
+
+- Sliders/portrait/perfil continuam editáveis no Keymaster.
+- O Player NÃO usa mais esses valores editáveis ao vivo.
+- Ao TRANSMITIR, o Keymaster captura um snapshot da reação efetiva e o grava dentro da mesma mensagem.
+- Mensagem + reaction snapshot + estado entregue são gravados no MESMO setState.
+- O Player atualiza portrait, Raiva, Tensão, Euforia e tom somente ao receber uma fala da Yumiya.
+- Reações diretas continuam vinculadas ao P-ID já existente.
+- Nenhuma mudança em Firebase Rules, Auth, UID ou estrutura de acesso.
+
+Cache-buster desta correção: YRX1 em state.js/keymaster.js/player.js.
