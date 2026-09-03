@@ -1,0 +1,19 @@
+PLAYER WELCOME + EVENT FIX + YU BOT GIF PRIORITY V1
+
+Inclui o patch anterior de Welcome/Event Fix e adiciona suporte aos portraits animados da Yumiya.
+
+Prioridade de portrait:
+1. GIF específico do preset (quando existir)
+2. PNG específico do preset
+3. GIF padrão do estado
+4. PNG padrão do estado
+5. fallback antigo para o normal
+
+GIFs incluídos:
+- yumiya-normal.gif
+- yumiya-raiva.gif
+- yumiya-medo.gif
+- yumiya-feliz.gif
+- yumiya-envergonhada.gif
+
+Não altera Firebase Rules, Auth, UID, realtime.js ou caminhos de banco.

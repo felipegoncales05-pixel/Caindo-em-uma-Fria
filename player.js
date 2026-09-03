@@ -3,7 +3,7 @@ console.info("[DCX OS] A2.2 AUTH ISOLATION // PLAYER // YUMIYA CORE FINAL-11");
 (() => {
   let state = OPH.cloneDefault();
   let room = new URLSearchParams(location.search).get("room") || localStorage.getItem("oph-room") || window.OPH_CONFIG.defaultRoom || "FRIA-01";
-  let connected=false, currentStage=0, lastEventId=null, eventStreamReady=false, playerUid=null, chatOpen=false, focusMode=false, unread=0, lastSeenCommsTs=0;
+  let connected=false, currentStage=0, lastEventId=null, eventStreamReady=false, hasReceivedStateSnapshot=false, playerUid=null, chatOpen=false, focusMode=false, unread=0, lastSeenCommsTs=0;
   const stageDefs=[
     ["home","ABERTURA"],["government","GOVERNO"],["h01","H-01"],["approaches","PLANO"],["preps","D-1"],["n02","N-02"],["protocol","PROTO"]
   ];
@@ -147,7 +147,13 @@ console.info("[DCX OS] A2.2 AUTH ISOLATION // PLAYER // YUMIYA CORE FINAL-11");
     loadedPortraitKey=loadKey;
     const mood=portraitMoodFiles[key];
     const candidates=[];
-    if(preset!=="standard")candidates.push(`yumiya-${preset}-${mood}.png`);
+    // YU BOT GIF PRIORITY: portraits animados são a fonte principal.
+    // PNG fica como fallback automático se o GIF não existir ou falhar.
+    if(preset!=="standard"){
+      candidates.push(`yumiya-${preset}-${mood}.gif`);
+      candidates.push(`yumiya-${preset}-${mood}.png`);
+    }
+    candidates.push(`yumiya-${mood}.gif`);
     candidates.push(`yumiya-${mood}.png`);
     if(key==="normal")candidates.push("yumiya-portrait.png");
     const tryNext=()=>{
@@ -156,7 +162,7 @@ console.info("[DCX OS] A2.2 AUTH ISOLATION // PLAYER // YUMIYA CORE FINAL-11");
       const img=new Image();
       img.onload=()=>{portrait.style.setProperty("--yumiyaPortrait",`url('${src}')`);portrait.classList.add("hasPortrait")};
       img.onerror=tryNext;
-      img.src=src+"?v=YRX2";
+      img.src=src+"?v=YUGIF1";
     };
     tryNext();
   }
@@ -280,10 +286,12 @@ console.info("[DCX OS] A2.2 AUTH ISOLATION // PLAYER // YUMIYA CORE FINAL-11");
   }
   function renderEvent(){
     const ev=state.event;
-    // O primeiro snapshot serve apenas como baseline. Um alerta persistido de uma sessão
-    // anterior não deve saltar na tela toda vez que o jogador abre/recarrega o site.
-    if(!eventStreamReady){lastEventId=ev?.id||null;eventStreamReady=true;return}
-    if(!ev||!ev.id||ev.id===lastEventId)return;lastEventId=ev.id;
+    // Só começamos a reagir a broadcasts depois do PRIMEIRO snapshot real da sala.
+    // O render local inicial usa cloneDefault() e não pode armar o stream, senão um
+    // broadcast antigo persistido no Firebase é interpretado como novo ao abrir o site.
+    if(!eventStreamReady)return;
+    if(!ev||!ev.id||ev.id===lastEventId)return;
+    lastEventId=ev.id;
     $("eventTitle").textContent=ev.title||"ALERTA";$("eventBody").textContent=ev.body||"";$("eventOverlay").classList.add("show");beep(ev.type==="n02"?240:180,.1);
     setTimeout(()=>$("eventOverlay").classList.remove("show"),ev.duration||5000);
   }
@@ -469,6 +477,9 @@ console.info("[DCX OS] A2.2 AUTH ISOLATION // PLAYER // YUMIYA CORE FINAL-11");
   function switchTab(tab){document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));$(tab).classList.add("active")}
   async function connect(){
     room=$("room").value.trim().toUpperCase()||"FRIA-01";localStorage.setItem("oph-room",room);history.replaceState(null,"",`?room=${encodeURIComponent(room)}`);
+    // Uma conexão/reconexão precisa criar um novo baseline de broadcasts para a sala.
+    // Isso impede replay de H-01/N-02 persistidos de sessões anteriores.
+    hasReceivedStateSnapshot=false;eventStreamReady=false;lastEventId=null;
     const typedName=cleanOperatorName($("name")?.value||"");
     if(typedName){
       const current=getYumiyaIdentity();
@@ -476,11 +487,24 @@ console.info("[DCX OS] A2.2 AUTH ISOLATION // PLAYER // YUMIYA CORE FINAL-11");
     }
     try{
       const r=await OPH.Realtime.connect({roomId:room,asHost:false});connected=true;playerUid=r.uid||OPH.Realtime.getUid();
-      $("conn").classList.add("on");$("mode").textContent=r.mode.toUpperCase();await publishYumiyaIdentity();await window.DCX?.Player?.init?.(true);toast("CONECTADO À SALA "+room);renderYumiya()
+      $("conn").classList.add("on");$("mode").textContent=r.mode.toUpperCase();await publishYumiyaIdentity();await window.DCX?.Player?.init?.(true);
+      const identity=getYumiyaIdentity();
+      window.DCXWelcome?.show?.({name:identity?.name||typedName||"AGENTE",playerId:identity?.playerId||"",room});
+      toast("CONECTADO À SALA "+room);renderYumiya()
     }
     catch(e){toast("FALHA AO CONECTAR");console.error(e)}
   }
-  OPH.Realtime.onState(s=>{state=mergeDefaults(s);render()});
+  OPH.Realtime.onState(s=>{
+    state=mergeDefaults(s);
+    // PRIMEIRO snapshot recebido da sala = baseline silencioso.
+    // Guardamos o id do evento que já estava persistido e só então armamos o stream.
+    if(!hasReceivedStateSnapshot){
+      hasReceivedStateSnapshot=true;
+      lastEventId=state.event?.id||null;
+      eventStreamReady=true;
+    }
+    render();
+  });
   window.OPHPlayer={go,submitKey,switchTab,connect,toggleYumiyaChat,toggleYumiyaFocus,sendYumiyaMessage,confirmYumiyaIdentity,changeYumiyaIdentity,openYumiyaRename,cancelYumiyaRename,confirmYumiyaRename};
   window.addEventListener("DOMContentLoaded",()=>{
     $("room").value=room;$("name").value=localStorage.getItem("oph-name")||"";
