@@ -1,6 +1,6 @@
 window.DCX = window.DCX || {};
 (() => {
-  const BUILD = "POLLS-V1.1-KEYMASTER-NAV-HOTFIX";
+  const BUILD = "POLLS-V1.2-PLAYER-VIEW";
   const MAX_DURATION_SECONDS = 86400;
   const MAX_RETENTION_HOURS = 720;
   const $ = id => document.getElementById(id);
@@ -9,7 +9,7 @@ window.DCX = window.DCX || {};
   const uid = prefix => `${prefix}-${(crypto.randomUUID?.() || Math.random().toString(36).slice(2)+Date.now().toString(36)).replace(/-/g,"").slice(0,10).toUpperCase()}`;
   const palette = ["#67dcff","#ffcf66","#ff7f9a","#8cffaa","#c499ff","#ff9b66","#7bb3ff","#f7f07a"];
 
-  let db=null, auth=null, room="FRIA-01", base="", polls={}, pollRef=null, retryTimer=null, tickTimer=null, editId="", initialized=false;
+  let db=null, auth=null, room="FRIA-01", base="", polls={}, pollRef=null, publicPollRef=null, publicPollSignature="", retryTimer=null, tickTimer=null, editId="", initialized=false;
   const closing = new Set();
 
 
@@ -57,6 +57,39 @@ window.DCX = window.DCX || {};
   function totalVotes(p){return Object.values(voteCounts(p)).reduce((a,b)=>a+b,0)}
   function winnerByVotes(p){const counts=voteCounts(p), vals=Object.entries(counts);if(!vals.length)return{winner:"",tied:[]};const max=Math.max(...vals.map(([,n])=>n));if(max<=0)return{winner:"",tied:[]};const tied=vals.filter(([,n])=>n===max).map(([id])=>id);return{winner:tied.length===1?tied[0]:"",tied}}
   function getPoll(id){return polls?.[id]||null}
+
+
+  function publicProjection(p){
+    const options={};
+    optionEntries(p).forEach(o=>{
+      options[o.id]={id:o.id,label:o.label||"",description:o.description||"",order:Number(o.order)||0};
+    });
+    return {
+      id:p.id||"", title:p.title||"", description:p.description||"",
+      visualMode:p.visualMode||"standard", closeMode:p.closeMode||"auto",
+      durationSeconds:Number(p.durationSeconds)||0, startedAt:Number(p.startedAt)||0,
+      endsAt:Number(p.endsAt)||0, resultsVisibility:p.resultsVisibility||"hidden",
+      status:"active", options
+    };
+  }
+
+  async function syncPublicPolls(){
+    if(!initialized||!publicPollRef)return;
+    const active=Object.entries(polls||{}).filter(([id,p])=>id!=="_init"&&p?.status==="active");
+    const payload={};
+    active.forEach(([id,p])=>{payload[id]=publicProjection({...p,id})});
+    const out=Object.keys(payload).length?payload:null;
+    const sig=JSON.stringify(out);
+    if(sig===publicPollSignature)return;
+    try{
+      await publicPollRef.set(out);
+      publicPollSignature=sig;
+      console.info("VOTAÇÕES // PROJEÇÃO PÚBLICA ATUALIZADA",{ativas:active.length});
+    }catch(e){
+      console.error("Falha ao publicar votação para jogadores",e);
+      toast(`VOTAÇÕES PLAYER // ${e.code||"ERRO"}`);
+    }
+  }
 
   function durationSeconds(){
     const value=Math.max(1,Number($("pollDurationValue")?.value)||1);
@@ -138,7 +171,7 @@ window.DCX = window.DCX || {};
   function renderFormPreview(){const box=$("pollPreview");if(!box)return;const p=readForm();p.status="preview";box.innerHTML=previewCard(p)}
 
   async function saveDraft(){if(!initialized){toast("VOTAÇÕES // SINCRONIZANDO");return}const data=readForm(),error=validate(data);if(error){toast(error);return}const id=editId||uid("POLL"),existing=getPoll(id);if(existing&&existing.status!=="draft"){toast("VOTAÇÃO ATIVA/ENCERRADA NÃO PODE VIRAR RASCUNHO");return}const now=Date.now();await ref(id).set({...existing,...data,id,status:"draft",createdAt:existing?.createdAt||now,updatedAt:now,startedAt:null,endsAt:null,closedAt:null,winnerOptionId:null,deleteAt:null});editId=id;toast("RASCUNHO SALVO");}
-  async function startNow(){if(!initialized){toast("VOTAÇÕES // SINCRONIZANDO");return}const data=readForm(),error=validate(data);if(error){toast(error);return}const id=editId||uid("POLL"),existing=getPoll(id);if(existing&&existing.status!=="draft"){toast("ESTA VOTAÇÃO JÁ FOI INICIADA");return}const now=Date.now();await ref(id).set({...existing,...data,id,status:"active",createdAt:existing?.createdAt||now,updatedAt:now,startedAt:now,endsAt:now+data.durationSeconds*1000,closedAt:null,winnerOptionId:null,deleteAt:null,votes:existing?.votes||{}});toast("VOTAÇÃO INICIADA // PREVIEW ADMIN");resetForm()}
+  async function startNow(){if(!initialized){toast("VOTAÇÕES // SINCRONIZANDO");return}const data=readForm(),error=validate(data);if(error){toast(error);return}const id=editId||uid("POLL"),existing=getPoll(id);if(existing&&existing.status!=="draft"){toast("ESTA VOTAÇÃO JÁ FOI INICIADA");return}const now=Date.now();await ref(id).set({...existing,...data,id,status:"active",createdAt:existing?.createdAt||now,updatedAt:now,startedAt:now,endsAt:now+data.durationSeconds*1000,closedAt:null,winnerOptionId:null,deleteAt:null,votes:existing?.votes||{}});toast("VOTAÇÃO INICIADA // PUBLICADA PARA JOGADORES");resetForm()}
 
   async function activateDraft(id){const p=getPoll(id);if(!p||p.status!=="draft")return;const now=Date.now();await ref(id).update({status:"active",startedAt:now,endsAt:now+(Number(p.durationSeconds)||300)*1000,updatedAt:now});toast("VOTAÇÃO INICIADA")}
   async function closePoll(id,winnerId="",auto=false){const p=getPoll(id);if(!p||p.status!=="active"||closing.has(id))return;closing.add(id);try{
@@ -171,8 +204,8 @@ window.DCX = window.DCX || {};
     ensureNavigation();
     clearTimeout(retryTimer);const r=rt();auth=r?.getFirebaseAuth?.()||null;db=r?.getFirebaseDatabase?.()||null;room=r?.getRoom?.()||new URLSearchParams(location.search).get("room")||window.OPH_CONFIG?.defaultRoom||"FRIA-01";
     if(!auth?.currentUser||!db){retryTimer=setTimeout(init,700);return false}
-    if(initialized)return true;base=`rooms/${room}/dcx/polls`;pollRef=db.ref(base);pollRef.on("value",s=>{polls=s.val()||{};render();lifecycle()},e=>{console.error("Polls listener",e);toast(`VOTAÇÕES // ${e.code||"ERRO"}`)});initialized=true;
-    if(!$("pollOptions")?.children.length)resetForm();clearInterval(tickTimer);tickTimer=setInterval(tick,1000);lifecycle();console.info("VOTAÇÕES V1 // KEYMASTER ADMIN + PREVIEW // READY",{room,build:BUILD});return true;
+    if(initialized)return true;base=`rooms/${room}/dcx/polls`;pollRef=db.ref(base);publicPollRef=db.ref(`rooms/${room}/dcx/meta/publicPolls`);pollRef.on("value",s=>{polls=s.val()||{};render();lifecycle();syncPublicPolls()},e=>{console.error("Polls listener",e);toast(`VOTAÇÕES // ${e.code||"ERRO"}`)});initialized=true;
+    if(!$("pollOptions")?.children.length)resetForm();clearInterval(tickTimer);tickTimer=setInterval(tick,1000);lifecycle();console.info("VOTAÇÕES V1.2 // KEYMASTER ADMIN + PLAYER VIEW // READY",{room,build:BUILD});return true;
   }
 
   function bindForm(){const root=$("pollCreator");if(!root)return;root.addEventListener("input",renderFormPreview);root.addEventListener("change",e=>{if(e.target?.id==="pollRetentionMode")syncRetentionUI();renderFormPreview()});if(!$("pollOptions")?.children.length)resetForm()}

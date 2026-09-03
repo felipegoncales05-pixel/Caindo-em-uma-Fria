@@ -1,0 +1,11 @@
+VOTAÇÕES V1.2 // PLAYER VIEW READ-ONLY
+
+Nesta etapa:
+- Votação em RASCUNHO NÃO aparece para jogadores.
+- Ao clicar INICIAR VOTAÇÃO, o Keymaster publica uma projeção sanitizada em dcx/meta/publicPolls.
+- Jogadores veem a votação em DCX > VOTAÇÕES.
+- Título, descrição, opções, formato e timer aparecem em tempo real.
+- Ainda NÃO existe voto do jogador.
+- winnerDescription e outros dados administrativos NÃO são publicados no caminho público.
+- Ao encerrar/excluir a votação ativa, ela deixa de aparecer para os jogadores.
+- Nenhuma Firebase Rule foi alterada; dcx/meta já é leitura autenticada e escrita do Keymaster.
