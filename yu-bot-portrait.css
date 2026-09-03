@@ -1,0 +1,11 @@
+/* YU BOT PORTRAIT V2 — explicit <img> source, GIF-first */
+.yumiyaFocusPortrait{position:relative;background-image:radial-gradient(circle at 50% 32%,#193648 0,#08131c 42%,#03080c 82%)!important}
+.yumiyaPortraitImage{position:absolute;inset:0;z-index:0;width:100%;height:100%;object-fit:cover;object-position:center;opacity:0;transition:opacity .16s ease;pointer-events:none;user-select:none}
+.yumiyaFocusPortrait.hasPortrait .yumiyaPortraitImage{opacity:1}
+.yumiyaPortraitShade{position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,rgba(3,9,14,.03),rgba(3,9,14,.12) 56%,rgba(3,9,14,.88))}
+.yumiyaFocusPortrait:before{z-index:2!important}
+.yumiyaFocusPortrait:after{z-index:3!important}
+.yumiyaPortraitScan{z-index:4!important}
+.yumiyaPortraitFallback{z-index:5!important}
+.yumiyaPortraitData{z-index:6!important}
+@media(max-width:760px){.yumiyaPortraitImage{object-position:center 25%}}

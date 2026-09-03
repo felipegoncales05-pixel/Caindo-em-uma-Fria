@@ -1,0 +1,11 @@
+PLAYER WELCOME + YU GIF V2
+
+Correções locais:
+- GIF vira o src real de um <img>; PNG só entra via onerror.
+- O estado só é marcado como carregado depois de onload.
+- Intro Bem-vindo tem prioridade e broadcasts recebidos durante a intro entram em fila.
+- Eventos persistidos anteriores à conexão atual são tratados como baseline silencioso.
+- Sem alterações em Firebase Rules, UID, Auth ou realtime.js.
+
+Console esperado ao abrir Yumiya em Focus:
+YU BOT PORTRAIT // NORMAL // GIF OK

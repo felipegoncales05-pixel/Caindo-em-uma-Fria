@@ -4,6 +4,7 @@ console.info("[DCX OS] A2.2 AUTH ISOLATION // PLAYER // YUMIYA CORE FINAL-11");
   let state = OPH.cloneDefault();
   let room = new URLSearchParams(location.search).get("room") || localStorage.getItem("oph-room") || window.OPH_CONFIG.defaultRoom || "FRIA-01";
   let connected=false, currentStage=0, lastEventId=null, eventStreamReady=false, hasReceivedStateSnapshot=false, playerUid=null, chatOpen=false, focusMode=false, unread=0, lastSeenCommsTs=0;
+  let playerConnectedAt=0, queuedEvent=null, eventHideTimer=null, portraitLoadToken=0, loadedPortraitKind="";
   const stageDefs=[
     ["home","ABERTURA"],["government","GOVERNO"],["h01","H-01"],["approaches","PLANO"],["preps","D-1"],["n02","N-02"],["protocol","PROTO"]
   ];
@@ -139,32 +140,58 @@ console.info("[DCX OS] A2.2 AUTH ISOLATION // PLAYER // YUMIYA CORE FINAL-11");
   function moodWord(v){return v<25?"BAIXA":v<55?"ELEVADA":v<80?"ALTA":"CRÍTICA"}
   function euphoriaWord(v){return v<25?"CONTIDA":v<55?"PRESENTE":v<80?"ALTA":"EUFÓRICA"}
   function loadPortraitFor(key,preset="standard"){
-    const portrait=$("yumiyaFocusPortrait");if(!portrait)return;
+    const portrait=$("yumiyaFocusPortrait"), image=$("yumiyaPortraitImage");if(!portrait)return;
     key=portraitMoodFiles[key]?key:"normal";
     preset=String(preset||"standard").toLowerCase().replace(/[^a-z0-9_-]/g,"")||"standard";
     const loadKey=preset+":"+key;
-    if(loadedPortraitKey===loadKey)return;
-    loadedPortraitKey=loadKey;
+    // Se o GIF deste mesmo estado já venceu, não reiniciamos o loop a cada render.
+    if(loadedPortraitKey===loadKey && loadedPortraitKind==="gif" && image?.getAttribute("src"))return;
     const mood=portraitMoodFiles[key];
     const candidates=[];
-    // YU BOT GIF PRIORITY: portraits animados são a fonte principal.
-    // PNG fica como fallback automático se o GIF não existir ou falhar.
     if(preset!=="standard"){
-      candidates.push(`yumiya-${preset}-${mood}.gif`);
-      candidates.push(`yumiya-${preset}-${mood}.png`);
+      candidates.push({src:`yumiya-${preset}-${mood}.gif`,kind:"gif"});
+      candidates.push({src:`yumiya-${preset}-${mood}.png`,kind:"png"});
     }
-    candidates.push(`yumiya-${mood}.gif`);
-    candidates.push(`yumiya-${mood}.png`);
-    if(key==="normal")candidates.push("yumiya-portrait.png");
-    const tryNext=()=>{
-      const src=candidates.shift();
-      if(!src){portrait.classList.remove("hasPortrait");portrait.style.removeProperty("--yumiyaPortrait");return}
-      const img=new Image();
-      img.onload=()=>{portrait.style.setProperty("--yumiyaPortrait",`url('${src}')`);portrait.classList.add("hasPortrait")};
-      img.onerror=tryNext;
-      img.src=src+"?v=YUGIF1";
+    candidates.push({src:`yumiya-${mood}.gif`,kind:"gif"});
+    candidates.push({src:`yumiya-${mood}.png`,kind:"png"});
+    if(key==="normal")candidates.push({src:"yumiya-portrait.png",kind:"png"});
+
+    const token=++portraitLoadToken;
+    const applyWithImageElement=(idx=0)=>{
+      const candidate=candidates[idx];
+      if(!candidate){
+        if(token!==portraitLoadToken)return;
+        portrait.classList.remove("hasPortrait");
+        image?.removeAttribute("src");
+        loadedPortraitKey=null;loadedPortraitKind="";
+        return;
+      }
+      if(!image){
+        // Compatibilidade caso um HTML antigo seja misturado no deploy.
+        const probe=new Image();
+        probe.onload=()=>{
+          if(token!==portraitLoadToken)return;
+          portrait.style.setProperty("--yumiyaPortrait",`url('${candidate.src}?v=YUGIF2')`);
+          portrait.classList.add("hasPortrait");loadedPortraitKey=loadKey;loadedPortraitKind=candidate.kind;
+        };
+        probe.onerror=()=>applyWithImageElement(idx+1);
+        probe.src=candidate.src+"?v=YUGIF2";
+        return;
+      }
+      image.onload=()=>{
+        if(token!==portraitLoadToken)return;
+        portrait.classList.add("hasPortrait");
+        loadedPortraitKey=loadKey;loadedPortraitKind=candidate.kind;
+        console.info(`YU BOT PORTRAIT // ${key.toUpperCase()} // ${candidate.kind.toUpperCase()} OK`);
+      };
+      image.onerror=()=>{
+        if(token!==portraitLoadToken)return;
+        applyWithImageElement(idx+1);
+      };
+      // GIF é realmente o src do elemento. PNG só é tentado se onerror disparar.
+      image.src=candidate.src+"?v=YUGIF2";
     };
-    tryNext();
+    applyWithImageElement(0);
   }
   function renderYumiyaAffect(){
     const a=effectiveAffect();
@@ -284,16 +311,38 @@ console.info("[DCX OS] A2.2 AUTH ISOLATION // PLAYER // YUMIYA CORE FINAL-11");
     const e=OPH.EMERGENCY_STATES[state.emergency.level||0];$("emStatus").textContent=e.status;$("emTitle").textContent=e.title;$("emText").textContent=e.text;$("emMeter").style.width=e.meter+"%";
     $("emSim").classList.toggle("hidden",!state.visible.emergencySim);
   }
+  function showBroadcast(ev){
+    if(!ev||!ev.id)return;
+    clearTimeout(eventHideTimer);
+    $("eventTitle").textContent=ev.title||"ALERTA";
+    $("eventBody").textContent=ev.body||"";
+    $("eventOverlay").classList.add("show");
+    beep(ev.type==="n02"?240:180,.1);
+    eventHideTimer=setTimeout(()=>$("eventOverlay").classList.remove("show"),ev.duration||5000);
+  }
   function renderEvent(){
     const ev=state.event;
-    // Só começamos a reagir a broadcasts depois do PRIMEIRO snapshot real da sala.
-    // O render local inicial usa cloneDefault() e não pode armar o stream, senão um
-    // broadcast antigo persistido no Firebase é interpretado como novo ao abrir o site.
     if(!eventStreamReady)return;
     if(!ev||!ev.id||ev.id===lastEventId)return;
+
+    // Defesa extra contra broadcasts persistidos: um evento claramente anterior à
+    // conexão atual vira baseline, mesmo que uma corrida de snapshot aconteça.
+    const eventTs=Number(ev.ts)||0;
+    if(playerConnectedAt && eventTs && eventTs < playerConnectedAt-1500){
+      lastEventId=ev.id;
+      return;
+    }
+
     lastEventId=ev.id;
-    $("eventTitle").textContent=ev.title||"ALERTA";$("eventBody").textContent=ev.body||"";$("eventOverlay").classList.add("show");beep(ev.type==="n02"?240:180,.1);
-    setTimeout(()=>$("eventOverlay").classList.remove("show"),ev.duration||5000);
+    if(window.DCXWelcome?.isActive?.()){
+      queuedEvent=Object.assign({},ev);
+      window.DCXWelcome.after(()=>{
+        const pending=queuedEvent;queuedEvent=null;
+        if(pending)showBroadcast(pending);
+      });
+      return;
+    }
+    showBroadcast(ev);
   }
 
   function localChatKey(){
@@ -476,6 +525,8 @@ console.info("[DCX OS] A2.2 AUTH ISOLATION // PLAYER // YUMIYA CORE FINAL-11");
   }
   function switchTab(tab){document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));$(tab).classList.add("active")}
   async function connect(){
+    playerConnectedAt=Date.now();queuedEvent=null;
+    $("eventOverlay")?.classList.remove("show");
     room=$("room").value.trim().toUpperCase()||"FRIA-01";localStorage.setItem("oph-room",room);history.replaceState(null,"",`?room=${encodeURIComponent(room)}`);
     // Uma conexão/reconexão precisa criar um novo baseline de broadcasts para a sala.
     // Isso impede replay de H-01/N-02 persistidos de sessões anteriores.

@@ -1,7 +1,8 @@
+/* PLAYER WELCOME V2 — intro always wins visual priority */
 /* PLAYER WELCOME V1 — local UI only */
 .playerWelcomeNotice{
   position:fixed;left:50%;top:22px;transform:translate(-50%,-18px);
-  z-index:12000;width:min(620px,calc(100vw - 28px));
+  z-index:30000;width:min(620px,calc(100vw - 28px));
   padding:14px 18px;border:1px solid color-mix(in srgb,var(--ps-accent,#58d9ff) 58%,transparent);
   border-radius:14px;background:color-mix(in srgb,var(--ps-panel,#07131c) 94%,transparent);
   box-shadow:0 18px 55px rgba(0,0,0,.38),0 0 30px color-mix(in srgb,var(--ps-accent,#58d9ff) 10%,transparent);
