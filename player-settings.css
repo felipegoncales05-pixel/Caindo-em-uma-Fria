@@ -1,0 +1,106 @@
+/* PLAYER SETTINGS V1 — local visual preferences only. No Firebase/Auth/Rules. */
+html{color-scheme:dark}
+html[data-player-theme="arc-cyan"]{
+  --ps-bg0:#03070d;--ps-bg1:#07111c;--ps-panel:#091827;--ps-panel2:#0c2132;--ps-line:#294c63;--ps-line2:#3a708b;
+  --ps-text:#edf9ff;--ps-muted:#89aabc;--ps-accent:#63dfff;--ps-accent2:#6c96ff;--ps-good:#6fe0b0;--ps-warn:#ffd06f;--ps-danger:#ff6f84;--ps-violet:#a68cff;
+  --bg:var(--ps-bg0);--panel:var(--ps-panel);--panel2:var(--ps-panel2);--line:var(--ps-line);--text:var(--ps-text);--muted:var(--ps-muted);
+  --cyan:var(--ps-accent);--blue:var(--ps-accent2);--gold:var(--ps-warn);--red:var(--ps-danger);--green:var(--ps-good);--violet:var(--ps-violet)
+}
+html[data-player-theme="dcx-green"]{
+  --ps-bg0:#030907;--ps-bg1:#06110d;--ps-panel:#081711;--ps-panel2:#0d2118;--ps-line:#24483a;--ps-line2:#39745b;
+  --ps-text:#ebfff5;--ps-muted:#8db2a0;--ps-accent:#64e6a6;--ps-accent2:#72d8e8;--ps-good:#73e8aa;--ps-warn:#edca71;--ps-danger:#ff7387;--ps-violet:#aa91ff;
+  --bg:var(--ps-bg0);--panel:var(--ps-panel);--panel2:var(--ps-panel2);--line:var(--ps-line);--text:var(--ps-text);--muted:var(--ps-muted);
+  --cyan:var(--ps-accent);--blue:var(--ps-accent2);--gold:var(--ps-warn);--red:var(--ps-danger);--green:var(--ps-good);--violet:var(--ps-violet)
+}
+html[data-player-theme="ember-amber"]{
+  --ps-bg0:#0b0703;--ps-bg1:#151006;--ps-panel:#1a1208;--ps-panel2:#24180b;--ps-line:#594020;--ps-line2:#886132;
+  --ps-text:#fff5df;--ps-muted:#bda37a;--ps-accent:#ffc45f;--ps-accent2:#ff8c69;--ps-good:#a6d989;--ps-warn:#ffd06a;--ps-danger:#ff7070;--ps-violet:#c39cff;
+  --bg:var(--ps-bg0);--panel:var(--ps-panel);--panel2:var(--ps-panel2);--line:var(--ps-line);--text:var(--ps-text);--muted:var(--ps-muted);
+  --cyan:var(--ps-accent);--blue:var(--ps-accent2);--gold:var(--ps-warn);--red:var(--ps-danger);--green:var(--ps-good);--violet:var(--ps-violet)
+}
+html[data-player-theme="void-violet"]{
+  --ps-bg0:#08050d;--ps-bg1:#10091a;--ps-panel:#160d21;--ps-panel2:#1e122c;--ps-line:#49345e;--ps-line2:#76549a;
+  --ps-text:#f8f0ff;--ps-muted:#ad98bf;--ps-accent:#c593ff;--ps-accent2:#7fdcff;--ps-good:#8be0b8;--ps-warn:#efcc7c;--ps-danger:#ff719b;--ps-violet:#c593ff;
+  --bg:var(--ps-bg0);--panel:var(--ps-panel);--panel2:var(--ps-panel2);--line:var(--ps-line);--text:var(--ps-text);--muted:var(--ps-muted);
+  --cyan:var(--ps-accent);--blue:var(--ps-accent2);--gold:var(--ps-warn);--red:var(--ps-danger);--green:var(--ps-good);--violet:var(--ps-violet)
+}
+
+/* Global player recolor — loaded after every existing stylesheet. */
+html[data-player-theme] body{background:radial-gradient(circle at 15% 0,color-mix(in srgb,var(--ps-accent) 18%,transparent),transparent 35rem),linear-gradient(180deg,var(--ps-bg0),var(--ps-bg1) 60%,var(--ps-bg0))!important;color:var(--ps-text)}
+html[data-player-theme] .top{border-color:var(--ps-line)!important;background:color-mix(in srgb,var(--ps-bg0) 90%,transparent)!important}
+html[data-player-theme] .roomBar,html[data-player-theme] .nav button,html[data-player-theme] .side,html[data-player-theme] .adminPanel{border-color:var(--ps-line)!important;background:var(--ps-panel)!important}
+html[data-player-theme] .roomBar input,html[data-player-theme] .decrypt input,html[data-player-theme] .login input{border-color:var(--ps-line2)!important;background:var(--ps-bg0)!important;color:var(--ps-text)!important}
+html[data-player-theme] .screen{border-color:var(--ps-line)!important;background:color-mix(in srgb,var(--ps-bg1) 92%,transparent)!important}
+html[data-player-theme] .card,html[data-player-theme] .rule,html[data-player-theme] .approach,html[data-player-theme] .prep,html[data-player-theme] .fragment,html[data-player-theme] .ability{border-color:var(--ps-line)!important;background:linear-gradient(180deg,var(--ps-panel2),var(--ps-panel))!important}
+html[data-player-theme] .chip,html[data-player-theme] .tab,html[data-player-theme] .btn{border-color:var(--ps-line)!important;background:var(--ps-panel)!important;color:var(--ps-text)!important}
+html[data-player-theme] .btn.accent{background:var(--ps-accent)!important;border-color:var(--ps-accent)!important;color:var(--ps-bg0)!important}
+html[data-player-theme] .btn.gold{background:var(--ps-warn)!important;border-color:var(--ps-warn)!important;color:var(--ps-bg0)!important}
+html[data-player-theme] .tag,html[data-player-theme] .nav button.active,html[data-player-theme] .tab.active{color:var(--ps-accent)!important}
+html[data-player-theme] .nav button.active,html[data-player-theme] .tab.active{border-color:var(--ps-accent)!important}
+
+/* GOLPE | DCX hub */
+html[data-player-theme] .playerWorkspaceTab{border-color:var(--ps-line)!important;background:linear-gradient(180deg,var(--ps-panel),var(--ps-bg0))!important;color:var(--ps-muted)!important}
+html[data-player-theme] .playerWorkspaceTab:hover{border-color:var(--ps-line2)!important;background:var(--ps-panel2)!important}
+html[data-player-theme] .playerWorkspaceTab.active{border-color:var(--ps-accent)!important;background:linear-gradient(180deg,color-mix(in srgb,var(--ps-accent) 12%,var(--ps-panel2)),var(--ps-panel))!important;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ps-accent) 20%,transparent),0 8px 28px #0006!important}
+html[data-player-theme] .playerWorkspaceTab.active small,html[data-player-theme] .playerWorkspaceTab.active b{color:var(--ps-text)!important}
+html[data-player-theme] .dcxWorkspace{color:var(--ps-text)!important}
+html[data-player-theme] .dcxWorkspaceHero{border-color:var(--ps-line2)!important;background:radial-gradient(circle at 86% 18%,color-mix(in srgb,var(--ps-accent) 16%,var(--ps-panel2)) 0,var(--ps-panel) 32%,var(--ps-bg0) 75%)!important}
+html[data-player-theme] .dcxWorkspaceHero h1{color:var(--ps-text)!important}html[data-player-theme] .dcxWorkspaceHero p{color:var(--ps-muted)!important}
+html[data-player-theme] .dcxWorkspaceSeal{border-color:var(--ps-line2)!important;background:var(--ps-panel)!important;box-shadow:inset 0 0 30px color-mix(in srgb,var(--ps-accent) 11%,transparent),0 0 60px color-mix(in srgb,var(--ps-accent) 7%,transparent)!important}
+html[data-player-theme] .dcxWorkspaceSeal span{color:var(--ps-accent)!important}
+html[data-player-theme] .dcxModuleCard{border-color:var(--ps-line)!important;background:var(--ps-panel)!important;color:var(--ps-text)!important}
+html[data-player-theme] button.dcxModuleCard.live:hover{border-color:var(--ps-accent)!important;background:var(--ps-panel2)!important}
+html[data-player-theme] .dcxModuleIcon{border-color:var(--ps-line2)!important;background:var(--ps-panel2)!important;color:var(--ps-accent)!important}
+html[data-player-theme] .dcxModuleCard b{color:var(--ps-text)!important}html[data-player-theme] .dcxModuleCard small,html[data-player-theme] .dcxModuleCard p{color:var(--ps-muted)!important}
+html[data-player-theme] .dcxModuleState{color:var(--ps-accent)!important;border-color:var(--ps-line2)!important}
+html[data-player-theme] .dcxWorkspaceFoot{border-color:var(--ps-line)!important;color:var(--ps-muted)!important}html[data-player-theme] .dcxWorkspaceFoot b{color:var(--ps-accent)!important}
+
+/* DCX panels */
+html[data-player-theme] .dcxTeamPanel,html[data-player-theme] .dcxNotesPanel,html[data-player-theme] .dcxPollsPanel{border-color:var(--ps-line2)!important;background:linear-gradient(180deg,var(--ps-panel),var(--ps-bg0))!important}
+html[data-player-theme] .dcxTeamPanelHead{border-color:var(--ps-line)!important;background:var(--ps-panel2)!important}
+html[data-player-theme] .dcxPlayerTeamCard,html[data-player-theme] .dcxPlayerMember,html[data-player-theme] .dcxNoteRow,html[data-player-theme] .dcxNotePlayer{border-color:var(--ps-line)!important;background:var(--ps-panel)!important;color:var(--ps-text)!important}
+html[data-player-theme] .dcxNoteRow.active,html[data-player-theme] .dcxNoteRow:hover{border-color:var(--ps-accent)!important;background:var(--ps-panel2)!important}
+html[data-player-theme] .dcxNoteTitle,html[data-player-theme] .dcxNoteBody{border-color:var(--ps-line)!important;background:var(--ps-bg0)!important;color:var(--ps-text)!important}
+html[data-player-theme] .dcxNoteTitle:focus,html[data-player-theme] .dcxNoteBody:focus{border-color:var(--ps-accent)!important}
+
+/* Poll read-only */
+html[data-player-theme] .playerPollCard{border-color:var(--ps-line2)!important;background:radial-gradient(circle at 92% 0,color-mix(in srgb,var(--ps-accent) 13%,var(--ps-panel2)),var(--ps-panel) 38%,var(--ps-bg0) 82%)!important}
+html[data-player-theme] .playerPollCard>header h3,html[data-player-theme] .playerPollOption b,html[data-player-theme] .playerPollLegend b{color:var(--ps-text)!important}
+html[data-player-theme] .playerPollDescription,html[data-player-theme] .playerPollOption p,html[data-player-theme] .playerPollLegend p{color:var(--ps-muted)!important}
+html[data-player-theme] .playerPollOption{border-color:var(--ps-line)!important;background:var(--ps-panel)!important}
+html[data-player-theme] .playerPollOption>span{border-color:var(--ps-line2)!important;color:var(--ps-accent)!important}
+html[data-player-theme] .playerPollDonut{background:conic-gradient(var(--ps-accent) 0 25%,var(--ps-accent2) 25% 50%,var(--ps-warn) 50% 75%,var(--ps-violet) 75% 100%)!important}
+html[data-player-theme] .playerPollDonut:after{background:var(--ps-panel)!important;border-color:var(--ps-line2)!important}
+
+/* Yumiya follows the chosen theme without changing reaction colors. */
+html[data-player-theme] .yumiyaChat{border-color:var(--ps-line2)!important;background:linear-gradient(180deg,var(--ps-panel2),var(--ps-panel) 45%,var(--ps-bg0))!important;box-shadow:0 28px 90px #000d,0 0 40px color-mix(in srgb,var(--ps-accent) 10%,transparent)!important}
+html[data-player-theme] .yumiyaChatHead,html[data-player-theme] .yumiyaSystemLine,html[data-player-theme] .yumiyaComposer,html[data-player-theme] .yumiyaFoot,html[data-player-theme] .yumiyaProcessing{border-color:var(--ps-line)!important;background:var(--ps-panel)!important}
+html[data-player-theme] .yumiyaAvatar,html[data-player-theme] .yumiyaLaunchMark{border-color:var(--ps-line2)!important;background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--ps-accent) 20%,var(--ps-panel2)),var(--ps-panel) 70%)!important;color:var(--ps-accent)!important}
+html[data-player-theme] .chatBubble{border-color:var(--ps-line)!important;background:var(--ps-panel2)!important;color:var(--ps-text)!important}
+html[data-player-theme] .chatMsg.player .chatBubble{border-color:var(--ps-line2)!important;background:color-mix(in srgb,var(--ps-accent) 10%,var(--ps-panel2))!important;box-shadow:inset 3px 0 0 color-mix(in srgb,var(--ps-accent) 35%,transparent)!important}
+html[data-player-theme] .yumiyaComposer textarea{border-color:var(--ps-line)!important;background:var(--ps-bg0)!important;color:var(--ps-text)!important}
+html[data-player-theme] .yumiyaComposer textarea:focus{border-color:var(--ps-accent)!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--ps-accent) 11%,transparent)!important}
+html[data-player-theme] .chatFocusBtn,html[data-player-theme] .chatIconBtn,html[data-player-theme] .yumiyaReidentify{border-color:var(--ps-line)!important;background:var(--ps-panel)!important;color:var(--ps-muted)!important}
+html[data-player-theme] .chatFocusBtn:hover,html[data-player-theme] .chatFocusBtn.active,html[data-player-theme] .yumiyaReidentify:hover{border-color:var(--ps-accent)!important;color:var(--ps-text)!important;background:var(--ps-panel2)!important}
+
+/* Settings module + panel */
+.dcxSettingsPanel{position:fixed;inset:74px 24px 24px;z-index:96;border:1px solid var(--ps-line2,#35576a);border-radius:17px;background:linear-gradient(180deg,var(--ps-panel,#07131b),var(--ps-bg0,#03090e));box-shadow:0 28px 90px #000c;overflow:hidden;display:grid;grid-template-rows:auto minmax(0,1fr)}
+.dcxSettingsPanel.hidden{display:none!important}.dcxSettingsContent{overflow:auto;padding:18px;display:grid;gap:18px;align-content:start}.settingsIntro{display:flex;justify-content:space-between;gap:18px;align-items:flex-end;border-bottom:1px solid var(--ps-line);padding-bottom:14px}.settingsIntro h2{margin:4px 0 5px;font-size:26px}.settingsIntro p{margin:0;color:var(--ps-muted);font-size:11px;line-height:1.55;max-width:760px}.settingsCurrent{border:1px solid var(--ps-line2);border-radius:999px;padding:8px 11px;color:var(--ps-accent);font:950 8px/1 ui-monospace,monospace;white-space:nowrap}.settingsSection{display:grid;gap:10px}.settingsSectionHead small,.settingsSectionHead b{display:block}.settingsSectionHead small{color:var(--ps-muted);font:900 7px/1 ui-monospace,monospace;letter-spacing:.12em}.settingsSectionHead b{margin-top:4px;font:1000 15px/1 ui-monospace,monospace}.settingsThemeGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.settingsTheme{appearance:none;border:1px solid var(--ps-line);border-radius:14px;background:var(--ps-panel);color:var(--ps-text);padding:13px;text-align:left;cursor:pointer;display:grid;grid-template-columns:88px minmax(0,1fr) auto;gap:13px;align-items:center;transition:.15s ease}.settingsTheme:hover{border-color:var(--ps-line2);transform:translateY(-1px)}.settingsTheme.active{border-color:var(--ps-accent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ps-accent) 16%,transparent),0 8px 28px #0005}.settingsSwatch{height:54px;border-radius:10px;border:1px solid #ffffff18;display:grid;grid-template-columns:1.5fr 1fr 1fr;overflow:hidden;background:#000}.settingsSwatch i{display:block}.themeArc .settingsSwatch i:nth-child(1){background:#091827}.themeArc .settingsSwatch i:nth-child(2){background:#63dfff}.themeArc .settingsSwatch i:nth-child(3){background:#6c96ff}.themeGreen .settingsSwatch i:nth-child(1){background:#081711}.themeGreen .settingsSwatch i:nth-child(2){background:#64e6a6}.themeGreen .settingsSwatch i:nth-child(3){background:#72d8e8}.themeAmber .settingsSwatch i:nth-child(1){background:#1a1208}.themeAmber .settingsSwatch i:nth-child(2){background:#ffc45f}.themeAmber .settingsSwatch i:nth-child(3){background:#ff8c69}.themeViolet .settingsSwatch i:nth-child(1){background:#160d21}.themeViolet .settingsSwatch i:nth-child(2){background:#c593ff}.themeViolet .settingsSwatch i:nth-child(3){background:#7fdcff}.settingsThemeText b,.settingsThemeText small{display:block}.settingsThemeText b{font:1000 13px/1.1 ui-monospace,monospace}.settingsThemeText small{margin-top:5px;color:var(--ps-muted);font:8px/1.45 ui-monospace,monospace}.settingsSelected{border:1px solid var(--ps-line);border-radius:999px;padding:6px 8px;color:var(--ps-muted);font:900 7px/1 ui-monospace,monospace}.settingsTheme.active .settingsSelected{border-color:var(--ps-accent);color:var(--ps-accent)}
+.settingsDensityGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.settingsDensity{appearance:none;border:1px solid var(--ps-line);border-radius:13px;background:var(--ps-panel);color:var(--ps-text);padding:13px;text-align:left;cursor:pointer}.settingsDensity:hover{border-color:var(--ps-line2)}.settingsDensity.active{border-color:var(--ps-accent);background:color-mix(in srgb,var(--ps-accent) 7%,var(--ps-panel))}.settingsDensity b,.settingsDensity small{display:block}.settingsDensity b{font:1000 12px ui-monospace,monospace}.settingsDensity small{margin-top:5px;color:var(--ps-muted);font:8px/1.45 ui-monospace,monospace}.settingsActions{display:flex;justify-content:flex-end;border-top:1px solid var(--ps-line);padding-top:14px}
+
+/* Density: Comfortable keeps the current player layout. Compact makes the entire player console denser. */
+html[data-player-density="compact"] .app{max-width:1720px;padding:10px}
+html[data-player-density="compact"] .top{padding:8px 10px;border-radius:12px}html[data-player-density="compact"] .brand small{font-size:7px}html[data-player-density="compact"] .brand b{font-size:12px}html[data-player-density="compact"] .btn{padding:6px 8px;font-size:9px}
+html[data-player-density="compact"] .roomBar{margin:7px 0;padding:7px 9px}html[data-player-density="compact"] .roomBar input{padding:5px 7px}
+html[data-player-density="compact"] .playerWorkspaceBar{gap:7px!important;padding-top:7px!important}html[data-player-density="compact"] .playerWorkspaceTab{padding:9px 11px!important;border-radius:10px!important}html[data-player-density="compact"] .playerWorkspaceTab b{font-size:15px!important}html[data-player-density="compact"] .playerWorkspaceTab span{font-size:7px!important}
+html[data-player-density="compact"] .nav{margin:7px 0;gap:5px}html[data-player-density="compact"] .nav button{min-width:112px;padding:7px 8px;border-radius:9px}html[data-player-density="compact"] .screen{border-radius:14px;min-height:calc(100vh - 128px)}html[data-player-density="compact"] .view{padding:clamp(16px,2.7vw,38px);min-height:calc(100vh - 128px)}
+html[data-player-density="compact"] .display{font-size:clamp(46px,7vw,98px)}html[data-player-density="compact"] .title{font-size:clamp(36px,5vw,68px)}html[data-player-density="compact"] .lead{font-size:clamp(14px,1.35vw,19px)}html[data-player-density="compact"] .card{padding:12px;border-radius:13px}html[data-player-density="compact"] .card h3{font-size:clamp(19px,2vw,29px)}
+html[data-player-density="compact"] .dcxWorkspace{padding:12px 0 22px!important}html[data-player-density="compact"] .dcxWorkspaceHero{padding:18px 20px!important;border-radius:14px!important}html[data-player-density="compact"] .dcxWorkspaceHero h1{font-size:clamp(28px,4vw,52px)!important}html[data-player-density="compact"] .dcxWorkspaceSeal{flex-basis:96px!important}html[data-player-density="compact"] .dcxWorkspaceSeal span{font-size:25px!important}
+html[data-player-density="compact"] .dcxWorkspaceGrid{gap:8px!important}html[data-player-density="compact"] .dcxModuleCard{min-height:88px!important;padding:11px!important;grid-template-columns:44px minmax(0,1fr) auto!important;gap:10px!important}html[data-player-density="compact"] .dcxModuleIcon{width:42px!important;height:42px!important;border-radius:10px!important}html[data-player-density="compact"] .dcxModuleCard b{font-size:13px!important}html[data-player-density="compact"] .dcxModuleCard p{font-size:8px!important}
+html[data-player-density="compact"] .dcxTeamPanel,html[data-player-density="compact"] .dcxNotesPanel,html[data-player-density="compact"] .dcxPollsPanel,html[data-player-density="compact"] .dcxSettingsPanel{inset:58px 14px 14px}html[data-player-density="compact"] .dcxSettingsContent{padding:12px;gap:13px}html[data-player-density="compact"] .settingsTheme{padding:10px;grid-template-columns:72px minmax(0,1fr) auto}html[data-player-density="compact"] .settingsSwatch{height:44px}
+html[data-player-density="compact"] .yumiyaChat:not(.focus){width:min(430px,calc(100vw - 20px));height:min(620px,calc(100vh - 80px))}html[data-player-density="compact"] .yumiyaChatHead{padding:10px 12px!important}html[data-player-density="compact"] .yumiyaAvatar{width:42px;height:42px}html[data-player-density="compact"] .yumiyaMessages{padding:11px}html[data-player-density="compact"] .chatBubble{font-size:12px!important;padding:9px 10px}html[data-player-density="compact"] .yumiyaComposer{padding:9px!important}
+
+@media(max-width:760px){
+  .dcxSettingsPanel{inset:62px 8px 8px}.dcxSettingsContent{padding:11px}.settingsIntro{display:grid}.settingsCurrent{justify-self:start}.settingsThemeGrid,.settingsDensityGrid{grid-template-columns:1fr}.settingsTheme{grid-template-columns:72px minmax(0,1fr) auto}.settingsSwatch{height:46px}
+  html[data-player-density="compact"] .dcxModuleCard{grid-template-columns:40px minmax(0,1fr)!important}html[data-player-density="compact"] .dcxModuleState{grid-column:2!important}
+}

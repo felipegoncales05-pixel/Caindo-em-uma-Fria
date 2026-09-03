@@ -1,0 +1,21 @@
+PLAYER SETTINGS V1 — 4 TEMAS + HUD COMPACTA/CONFORTÁVEL
+
+Arquivos novos/alterados:
+- index.html
+- player-settings.css
+- player-settings.js
+
+Sem alterações em Firebase Rules, Auth, UID, Realtime Database ou lógica de votação.
+As preferências são locais por navegador via localStorage (chave: dcx-player-settings-v1).
+
+Temas:
+1. ARC // CIANO (padrão de fábrica; mais próximo do visual anterior)
+2. DCX // VERDE
+3. EMBER // ÂMBAR
+4. VOID // VIOLETA
+
+Densidade:
+- CONFORTÁVEL (padrão)
+- COMPACTO
+
+Acesso: Player > DCX > CONFIGURAÇÕES.
