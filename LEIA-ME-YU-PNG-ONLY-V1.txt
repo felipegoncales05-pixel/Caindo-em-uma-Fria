@@ -1,0 +1,11 @@
+YU BOT // PNG ONLY V1
+
+- suporte a GIF removido do player
+- nenhum .gif e tentado ou referenciado
+- portraits usam somente PNG
+- preserva Welcome/Event Fix V2
+- PNG especifico de preset -> PNG padrao da emocao -> fallback antigo normal
+- sem mudancas em Firebase/Auth/UID/Rules
+
+Se arquivos .gif antigos continuarem no repositorio, podem ser apagados quando quiser.
+O codigo nao os utiliza mais.

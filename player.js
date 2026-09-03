@@ -4,7 +4,7 @@ console.info("[DCX OS] A2.2 AUTH ISOLATION // PLAYER // YUMIYA CORE FINAL-11");
   let state = OPH.cloneDefault();
   let room = new URLSearchParams(location.search).get("room") || localStorage.getItem("oph-room") || window.OPH_CONFIG.defaultRoom || "FRIA-01";
   let connected=false, currentStage=0, lastEventId=null, eventStreamReady=false, hasReceivedStateSnapshot=false, playerUid=null, chatOpen=false, focusMode=false, unread=0, lastSeenCommsTs=0;
-  let playerConnectedAt=0, queuedEvent=null, eventHideTimer=null, portraitLoadToken=0, loadedPortraitKind="";
+  let playerConnectedAt=0, queuedEvent=null, eventHideTimer=null;
   const stageDefs=[
     ["home","ABERTURA"],["government","GOVERNO"],["h01","H-01"],["approaches","PLANO"],["preps","D-1"],["n02","N-02"],["protocol","PROTO"]
   ];
@@ -140,58 +140,35 @@ console.info("[DCX OS] A2.2 AUTH ISOLATION // PLAYER // YUMIYA CORE FINAL-11");
   function moodWord(v){return v<25?"BAIXA":v<55?"ELEVADA":v<80?"ALTA":"CRÍTICA"}
   function euphoriaWord(v){return v<25?"CONTIDA":v<55?"PRESENTE":v<80?"ALTA":"EUFÓRICA"}
   function loadPortraitFor(key,preset="standard"){
-    const portrait=$("yumiyaFocusPortrait"), image=$("yumiyaPortraitImage");if(!portrait)return;
+    const portrait=$("yumiyaFocusPortrait");if(!portrait)return;
     key=portraitMoodFiles[key]?key:"normal";
     preset=String(preset||"standard").toLowerCase().replace(/[^a-z0-9_-]/g,"")||"standard";
     const loadKey=preset+":"+key;
-    // Se o GIF deste mesmo estado já venceu, não reiniciamos o loop a cada render.
-    if(loadedPortraitKey===loadKey && loadedPortraitKind==="gif" && image?.getAttribute("src"))return;
+    if(loadedPortraitKey===loadKey)return;
+    loadedPortraitKey=loadKey;
     const mood=portraitMoodFiles[key];
     const candidates=[];
-    if(preset!=="standard"){
-      candidates.push({src:`yumiya-${preset}-${mood}.gif`,kind:"gif"});
-      candidates.push({src:`yumiya-${preset}-${mood}.png`,kind:"png"});
-    }
-    candidates.push({src:`yumiya-${mood}.gif`,kind:"gif"});
-    candidates.push({src:`yumiya-${mood}.png`,kind:"png"});
-    if(key==="normal")candidates.push({src:"yumiya-portrait.png",kind:"png"});
-
-    const token=++portraitLoadToken;
-    const applyWithImageElement=(idx=0)=>{
-      const candidate=candidates[idx];
-      if(!candidate){
-        if(token!==portraitLoadToken)return;
+    if(preset!=="standard")candidates.push(`yumiya-${preset}-${mood}.png`);
+    candidates.push(`yumiya-${mood}.png`);
+    if(key==="normal")candidates.push("yumiya-portrait.png");
+    const tryNext=()=>{
+      const src=candidates.shift();
+      if(!src){
         portrait.classList.remove("hasPortrait");
-        image?.removeAttribute("src");
-        loadedPortraitKey=null;loadedPortraitKind="";
+        portrait.style.removeProperty("--yumiyaPortrait");
+        loadedPortraitKey="";
         return;
       }
-      if(!image){
-        // Compatibilidade caso um HTML antigo seja misturado no deploy.
-        const probe=new Image();
-        probe.onload=()=>{
-          if(token!==portraitLoadToken)return;
-          portrait.style.setProperty("--yumiyaPortrait",`url('${candidate.src}?v=YUGIF2')`);
-          portrait.classList.add("hasPortrait");loadedPortraitKey=loadKey;loadedPortraitKind=candidate.kind;
-        };
-        probe.onerror=()=>applyWithImageElement(idx+1);
-        probe.src=candidate.src+"?v=YUGIF2";
-        return;
-      }
-      image.onload=()=>{
-        if(token!==portraitLoadToken)return;
+      const img=new Image();
+      img.onload=()=>{
+        portrait.style.setProperty("--yumiyaPortrait",`url('${src}?v=YUPNG1')`);
         portrait.classList.add("hasPortrait");
-        loadedPortraitKey=loadKey;loadedPortraitKind=candidate.kind;
-        console.info(`YU BOT PORTRAIT // ${key.toUpperCase()} // ${candidate.kind.toUpperCase()} OK`);
+        console.info(`YU BOT PORTRAIT // ${key.toUpperCase()} // PNG OK`);
       };
-      image.onerror=()=>{
-        if(token!==portraitLoadToken)return;
-        applyWithImageElement(idx+1);
-      };
-      // GIF é realmente o src do elemento. PNG só é tentado se onerror disparar.
-      image.src=candidate.src+"?v=YUGIF2";
+      img.onerror=tryNext;
+      img.src=src+"?v=YUPNG1";
     };
-    applyWithImageElement(0);
+    tryNext();
   }
   function renderYumiyaAffect(){
     const a=effectiveAffect();
