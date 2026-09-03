@@ -1,0 +1,25 @@
+DCX // VOTAÇÕES V1 — KEYMASTER ADMIN + PREVIEW
+
+Esta etapa NÃO altera Firebase Rules, UID, Auth ou o player.
+
+Incluído:
+- Aba VOTAÇÕES no Keymaster
+- Criar/editar rascunhos
+- Título e descrição geral
+- 2+ opções com descrição visível e descrição secreta do vencedor
+- Visual PADRÃO ou PIZZA/DONUT
+- Timer de 1 segundo até 24 horas
+- Fechamento automático pelo timer ou manual
+- Permitir/bloquear futura troca de voto
+- Resultados futuros visíveis/ocultos
+- Regras de empate preparadas
+- Rascunhos, ativas e histórico
+- Encerramento manual com escolha de vencedor
+- Arquivar, duplicar e excluir manualmente
+- AUTO-DELETE após X horas (1–720h)
+
+IMPORTANTE SOBRE AUTO-DELETE:
+Sem Cloud Functions, o navegador do Keymaster executa a limpeza enquanto estiver aberto.
+Se estiver fechado no momento da expiração, a votação é removida na próxima abertura do Keymaster.
+
+V1 ainda NÃO permite voto real do jogador.
