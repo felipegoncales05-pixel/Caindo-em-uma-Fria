@@ -1,6 +1,6 @@
 window.DCX = window.DCX || {};
 (() => {
-  const BUILD = "POLLS-V1-KEYMASTER";
+  const BUILD = "POLLS-V1.1-KEYMASTER-NAV-HOTFIX";
   const MAX_DURATION_SECONDS = 86400;
   const MAX_RETENTION_HOURS = 720;
   const $ = id => document.getElementById(id);
@@ -11,6 +11,40 @@ window.DCX = window.DCX || {};
 
   let db=null, auth=null, room="FRIA-01", base="", polls={}, pollRef=null, retryTimer=null, tickTimer=null, editId="", initialized=false;
   const closing = new Set();
+
+
+  function ensureNavigation(){
+    const tabs=document.getElementById("kmWorkspaceTabs");
+    let tab=document.querySelector('.kmWorkspaceTab[data-tab="polls"]');
+    if(tabs&&!tab){
+      tab=document.createElement("button");
+      tab.type="button";
+      tab.className="kmWorkspaceTab pollsNavTab";
+      tab.dataset.tab="polls";
+      tab.textContent="VOTAÇÕES";
+      const yumiya=tabs.querySelector('.kmWorkspaceTab[data-tab="yumiya"]');
+      tabs.insertBefore(tab,yumiya||null);
+    }
+    if(tab&&!tab.dataset.pollsBound){
+      tab.dataset.pollsBound="1";
+      tab.addEventListener("click",openAdmin);
+    }
+    return !!tab;
+  }
+
+  function openAdmin(){
+    ensureNavigation();
+    if(window.DCX?.Admin?.switchTab){
+      window.DCX.Admin.switchTab("polls");
+    }else{
+      document.querySelectorAll(".kmWorkspaceTab").forEach(b=>b.classList.toggle("active",b.dataset.tab==="polls"));
+      document.querySelectorAll(".kmWorkspaceView").forEach(v=>v.classList.toggle("active",v.dataset.kmView==="polls"));
+    }
+    requestAnimationFrame(()=>{
+      const view=document.querySelector('[data-km-view="polls"]');
+      if(view){view.scrollTop=0;view.querySelector("#pollTitle")?.focus({preventScroll:true});}
+    });
+  }
 
   function toast(text){const e=$("toast");if(!e)return;e.textContent=text;e.classList.add("show");setTimeout(()=>e.classList.remove("show"),1900)}
   function rt(){return window.OPH?.Realtime}
@@ -134,6 +168,7 @@ window.DCX = window.DCX || {};
 
   function render(){renderLists();renderFormPreview()}
   async function init(){
+    ensureNavigation();
     clearTimeout(retryTimer);const r=rt();auth=r?.getFirebaseAuth?.()||null;db=r?.getFirebaseDatabase?.()||null;room=r?.getRoom?.()||new URLSearchParams(location.search).get("room")||window.OPH_CONFIG?.defaultRoom||"FRIA-01";
     if(!auth?.currentUser||!db){retryTimer=setTimeout(init,700);return false}
     if(initialized)return true;base=`rooms/${room}/dcx/polls`;pollRef=db.ref(base);pollRef.on("value",s=>{polls=s.val()||{};render();lifecycle()},e=>{console.error("Polls listener",e);toast(`VOTAÇÕES // ${e.code||"ERRO"}`)});initialized=true;
@@ -141,6 +176,6 @@ window.DCX = window.DCX || {};
   }
 
   function bindForm(){const root=$("pollCreator");if(!root)return;root.addEventListener("input",renderFormPreview);root.addEventListener("change",e=>{if(e.target?.id==="pollRetentionMode")syncRetentionUI();renderFormPreview()});if(!$("pollOptions")?.children.length)resetForm()}
-  window.DCX.Polls={init,addOption,removeOption,resetForm,saveDraft,startNow,edit:id=>loadForm(getPoll(id),id),activate:activateDraft,closeFromCard,archive:archivePoll,delete:deletePoll,duplicate:duplicatePoll,renderFormPreview};
-  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>{bindForm();init()},{once:true});else{bindForm();init()}
+  window.DCX.Polls={init,openAdmin,addOption,removeOption,resetForm,saveDraft,startNow,edit:id=>loadForm(getPoll(id),id),activate:activateDraft,closeFromCard,archive:archivePoll,delete:deletePoll,duplicate:duplicatePoll,renderFormPreview};
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>{ensureNavigation();bindForm();init()},{once:true});else{ensureNavigation();bindForm();init()}
 })();

@@ -1,0 +1,16 @@
+VOTAÇÕES V1.1 — NAV HOTFIX
+
+Correção: acesso ao criador de votações no Keymaster.
+
+Agora existem dois acessos:
+1. Aba VOTAÇÕES na barra superior do Keymaster.
+2. Botão ABRIR VOTAÇÕES dentro de MASTER.
+
+O polls-admin.js também recria/injeta a aba VOTAÇÕES se ela não existir no DOM por algum motivo.
+
+NÃO ALTERA: Firebase Rules, UID, Auth, realtime, player, heartbeat ou equipes.
+
+Arquivos do patch:
+- keymaster.html
+- polls-admin.js
+- polls-admin.css
