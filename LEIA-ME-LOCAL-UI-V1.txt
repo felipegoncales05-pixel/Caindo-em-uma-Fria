@@ -1,0 +1,26 @@
+DCX OS // LOCAL UI V1
+=====================
+
+Esta build adiciona SOMENTE funções locais/front-end. NÃO altera Firebase Rules, Auth, UID, realtime.js ou caminhos de escrita.
+
+PLAYER
+- CONFIGURAÇÕES agora têm dois acessos: card em DCX + botão fixo "⚙ CONFIG" no topo.
+- 4 temas: ARC // CIANO, DCX // VERDE, EMBER // ÂMBAR, VOID // VIOLETA.
+- HUD CONFORTÁVEL / COMPACTO.
+- HANDOUTS agora abre uma caixa de documentos (interface pronta; recebimento real aguarda Storage/MEGARULE).
+- NOTIFICAÇÕES agora abre uma central local; registra avisos percebidos pelo próprio terminal (Yumiya/votações).
+- CANAL DA EQUIPE agora abre a interface do canal, mas o envio fica bloqueado até a MEGARULE.
+- Shift + N abre keymaster.html. O atalho não concede autenticação.
+
+KEYMASTER
+- Nova aba CONFIGURAÇÕES.
+- Controle CONFORTÁVEL / COMPACTA saiu do MASTER e foi movido para CONFIGURAÇÕES.
+- Os mesmos 4 temas visuais podem ser usados no Keymaster.
+- Shift + N volta para o Player.
+- HANDOUTS deixou de ser só placeholder: agora é possível preparar localmente título, descrição, destino e selecionar arquivo.
+- A fila de handouts salva apenas METADADOS no localStorage. Os bytes do arquivo NÃO são persistidos/enviados.
+- Botão de envio real continua bloqueado até Storage + MEGARULE.
+
+IMPORTANTE
+- Não publique nenhum arquivo de Firebase Rules nesta atualização: não existe nenhum no pacote de deploy.
+- O envio real de Handouts, voto real, notificações sincronizadas e Canal da Equipe continuam reservados para a futura MEGARULE.
