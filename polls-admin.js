@@ -1,6 +1,6 @@
 window.DCX = window.DCX || {};
 (() => {
-  const BUILD = "POLLS-V1.3.1-REAL-VOTE-FIX";
+  const BUILD = "POLLS-V1.4-RESULT-PUBLISH";
   const MAX_DURATION_SECONDS = 86400;
   const MAX_RETENTION_HOURS = 720;
   const $ = id => document.getElementById(id);
@@ -64,29 +64,42 @@ window.DCX = window.DCX || {};
     optionEntries(p).forEach(o=>{
       options[o.id]={id:o.id,label:o.label||"",description:o.description||"",order:Number(o.order)||0};
     });
-    return {
+    const final=["closed","archived"].includes(p.status);
+    const winnerId=final?String(p.winnerOptionId||""):"";
+    const winnerOpt=winnerId?optionEntries(p).find(o=>o.id===winnerId):null;
+    const out={
       id:p.id||"", title:p.title||"", description:p.description||"",
       visualMode:p.visualMode||"standard", closeMode:p.closeMode||"auto",
       durationSeconds:Number(p.durationSeconds)||0, startedAt:Number(p.startedAt)||0,
       endsAt:Number(p.endsAt)||0, resultsVisibility:p.resultsVisibility||"hidden",
       allowVoteChange:p.allowVoteChange!==false,
-      status:"active", options,
-      ...(p.resultsVisibility==="visible"?{counts:voteCounts(p),totalVotes:totalVotes(p)}:{})
+      status:final?"closed":"active", options
     };
+    if(final){
+      out.closedAt=Number(p.closedAt)||Date.now();
+      out.closedBy=p.closedBy||"KEYMASTER";
+      out.counts=voteCounts(p);out.totalVotes=totalVotes(p);out.resultsFinal=true;
+      out.winnerOptionId=winnerId||null;
+      out.winnerTiedOptionIds=Array.isArray(p.winnerTiedOptionIds)?p.winnerTiedOptionIds:[];
+      if(winnerOpt){out.winnerLabel=winnerOpt.label||"";out.winnerDescription=winnerOpt.winnerDescription||"";}
+    }else if(p.resultsVisibility==="visible"){
+      out.counts=voteCounts(p);out.totalVotes=totalVotes(p);
+    }
+    return out;
   }
 
   async function syncPublicPolls(){
     if(!initialized||!publicPollRef)return;
-    const active=Object.entries(polls||{}).filter(([id,p])=>id!=="_init"&&p?.status==="active");
+    const visible=Object.entries(polls||{}).filter(([id,p])=>id!=="_init"&&["active","closed"].includes(p?.status));
     const payload={};
-    active.forEach(([id,p])=>{payload[id]=publicProjection({...p,id})});
+    visible.forEach(([id,p])=>{payload[id]=publicProjection({...p,id})});
     const out=Object.keys(payload).length?payload:null;
     const sig=JSON.stringify(out);
     if(sig===publicPollSignature)return;
     try{
       await publicPollRef.set(out);
       publicPollSignature=sig;
-      console.info("VOTAÇÕES // PROJEÇÃO PÚBLICA ATUALIZADA",{ativas:active.length});
+      console.info("VOTAÇÕES // PROJEÇÃO PÚBLICA ATUALIZADA",{ativas:visible.filter(([,p])=>p.status==="active").length,resultados:visible.filter(([,p])=>p.status==="closed").length});
     }catch(e){
       console.error("Falha ao publicar votação para jogadores",e);
       toast(`VOTAÇÕES PLAYER // ${e.code||"ERRO"}`);

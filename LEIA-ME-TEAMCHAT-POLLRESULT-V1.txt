@@ -1,0 +1,26 @@
+DCX OS // TEAM CHAT + POLL RESULT V1
+
+CORREÇÕES
+1) CANAL DA EQUIPE
+- Remove placeholder "SEM SYNC AINDA".
+- Usa rooms/<room>/dcx/teamChat/<teamId>/messages.
+- Detecta a equipe atual do Player pelo operator/narrative/teamId.
+- Lê até as 100 mensagens mais recentes.
+- Envia senderPlayerId + text + createdAt, compatível com a MEGARULE V1.
+- Jogador sem equipe não consegue enviar.
+- PERMISSION_DENIED aparece de forma explícita.
+
+2) RESULTADO DE VOTAÇÃO NO PLAYER
+- publicPolls mantém polls ACTIVE e CLOSED.
+- CLOSED sempre publica contagens finais, independentemente de resultados terem ficado ocultos durante a votação.
+- Publica somente winnerDescription da opção vencedora.
+- Opções perdedoras nunca recebem suas descrições secretas na projeção pública.
+- Empate e sem vencedor são exibidos.
+- Ao ARQUIVAR no Keymaster, o resultado deixa a área pública do Player.
+
+NÃO ALTERADO
+- Firebase Rules / MEGARULE
+- UID / Auth
+- Yumiya // Remote
+- Yuyu/Ultron continua removida
+- state.js / realtime.js

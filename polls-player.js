@@ -1,6 +1,6 @@
 window.DCX = window.DCX || {};
 (() => {
-  const BUILD = "POLLS-V1.3.1-REAL-VOTE-FIX";
+  const BUILD = "POLLS-V1.4-RESULT-PUBLISH";
   const $ = id => document.getElementById(id);
   const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const palette = ["#67dcff","#ffcf66","#ff7f9a","#8cffaa","#c499ff","#ff9b66","#7bb3ff","#f7f07a"];
@@ -35,6 +35,10 @@ window.DCX = window.DCX || {};
   function activeEntries(){
     return Object.entries(polls||{}).filter(([,p])=>p?.status==="active").sort((a,b)=>(Number(b[1]?.startedAt)||0)-(Number(a[1]?.startedAt)||0));
   }
+  function closedEntries(){
+    return Object.entries(polls||{}).filter(([,p])=>p?.status==="closed").sort((a,b)=>(Number(b[1]?.closedAt)||0)-(Number(a[1]?.closedAt)||0));
+  }
+  function visibleEntries(){return [...activeEntries(),...closedEntries()]}
   function isExpired(p){
     return !!(p?.endsAt && Number(p.endsAt)>0 && Date.now()>Number(p.endsAt));
   }
@@ -47,7 +51,7 @@ window.DCX = window.DCX || {};
   }
   function countsFor(p){
     const out={};optionEntries(p).forEach(o=>out[o.id]=0);
-    const src=p?.resultsVisibility==="visible"?(p?.counts||{}):{};
+    const src=(p?.resultsVisibility==="visible"||p?.resultsFinal||p?.status==="closed")?(p?.counts||{}):{};
     Object.entries(src||{}).forEach(([id,n])=>{if(Object.prototype.hasOwnProperty.call(out,id))out[id]=Math.max(0,Number(n)||0)});
     return out;
   }
@@ -64,15 +68,15 @@ window.DCX = window.DCX || {};
     return [pending===o.id?"selected":"",prior===o.id?"voted":"",!canVote(id,p)?"locked":""].filter(Boolean).join(" ");
   }
   function resultLabel(p,o){
-    if(p?.resultsVisibility!=="visible")return "";
+    if(p?.resultsVisibility!=="visible"&&!p?.resultsFinal&&p?.status!=="closed")return "";
     const c=countsFor(p),t=totalFor(p),n=c[o.id]||0,pct=t?Math.round(n/t*100):0;
     return `${n} · ${pct}%`;
   }
   function renderStandard(id,p){
-    return `<div class="playerPollOptions">${optionEntries(p).map((o,i)=>`<button type="button" class="playerPollOption ${choiceState(id,p,o)}" data-poll-choice="${esc(id)}" data-option-id="${esc(o.id)}" ${canVote(id,p)?"":"disabled"}><span>${String(i+1).padStart(2,"0")}</span><div><b>${esc(o.label||`Opção ${i+1}`)}</b>${o.description?`<p>${esc(o.description)}</p>`:""}</div><em>${p.resultsVisibility==="visible"?esc(resultLabel(p,o)):(currentChoice(id)===o.id?"SEU VOTO":"SELECIONAR")}</em></button>`).join("")}</div>`;
+    return `<div class="playerPollOptions">${optionEntries(p).map((o,i)=>`<button type="button" class="playerPollOption ${choiceState(id,p,o)} ${p.winnerOptionId===o.id?"winner":""}" data-poll-choice="${esc(id)}" data-option-id="${esc(o.id)}" ${canVote(id,p)?"":"disabled"}><span>${String(i+1).padStart(2,"0")}</span><div><b>${esc(o.label||`Opção ${i+1}`)}</b>${o.description?`<p>${esc(o.description)}</p>`:""}</div><em>${(p.resultsVisibility==="visible"||p.resultsFinal||p.status==="closed")?esc(resultLabel(p,o)):(currentChoice(id)===o.id?"SEU VOTO":"SELECIONAR")}</em></button>`).join("")}</div>`;
   }
   function donutBackground(p){
-    if(p?.resultsVisibility!=="visible")return `conic-gradient(${palette.map((c,i)=>`${c} ${i*12.5}% ${(i+1)*12.5}%`).join(",")})`;
+    if(p?.resultsVisibility!=="visible"&&!p?.resultsFinal&&p?.status!=="closed")return `conic-gradient(${palette.map((c,i)=>`${c} ${i*12.5}% ${(i+1)*12.5}%`).join(",")})`;
     const opts=optionEntries(p),counts=countsFor(p),total=totalFor(p);
     if(!total)return "#173d4e";
     let acc=0;const seg=[];
@@ -81,7 +85,7 @@ window.DCX = window.DCX || {};
   }
   function renderPizza(id,p){
     const opts=optionEntries(p),total=totalFor(p);
-    return `<div class="playerPollPizza"><div class="playerPollDonut" style="background:${donutBackground(p)}"><div><b>${p.resultsVisibility==="visible"?total:opts.length}</b><small>${p.resultsVisibility==="visible"?"VOTOS":"OPÇÕES"}</small></div></div><div class="playerPollLegend">${opts.map((o,i)=>`<button type="button" class="playerPollLegendChoice ${choiceState(id,p,o)}" data-poll-choice="${esc(id)}" data-option-id="${esc(o.id)}" ${canVote(id,p)?"":"disabled"}><i data-poll-swatch="${i%8}"></i><div><b>${esc(o.label||`Opção ${i+1}`)}</b>${o.description?`<p>${esc(o.description)}</p>`:""}</div>${p.resultsVisibility==="visible"?`<strong>${esc(resultLabel(p,o))}</strong>`:(currentChoice(id)===o.id?"<strong>SEU VOTO</strong>":"")}</button>`).join("")}</div></div>`;
+    return `<div class="playerPollPizza"><div class="playerPollDonut" style="background:${donutBackground(p)}"><div><b>${(p.resultsVisibility==="visible"||p.resultsFinal||p.status==="closed")?total:opts.length}</b><small>${(p.resultsVisibility==="visible"||p.resultsFinal||p.status==="closed")?"VOTOS":"OPÇÕES"}</small></div></div><div class="playerPollLegend">${opts.map((o,i)=>`<button type="button" class="playerPollLegendChoice ${choiceState(id,p,o)} ${p.winnerOptionId===o.id?"winner":""}" data-poll-choice="${esc(id)}" data-option-id="${esc(o.id)}" ${canVote(id,p)?"":"disabled"}><i data-poll-swatch="${i%8}"></i><div><b>${esc(o.label||`Opção ${i+1}`)}</b>${o.description?`<p>${esc(o.description)}</p>`:""}</div>${(p.resultsVisibility==="visible"||p.resultsFinal||p.status==="closed")?`<strong>${esc(resultLabel(p,o))}</strong>`:(currentChoice(id)===o.id?"<strong>SEU VOTO</strong>":"")}</button>`).join("")}</div></div>`;
   }
   function actionFooter(id,p){
     const prior=currentChoice(id),pending=pendingChoice(id),expired=isExpired(p),busy=sending.has(id);
@@ -94,20 +98,32 @@ window.DCX = window.DCX || {};
     const same=prior&&pending===prior;
     return `<footer class="playerPollFooter"><div><span>${p.visualMode==="pizza"?"FORMATO // PIZZA":"FORMATO // PADRÃO"}</span><b>${esc(note)}</b></div>${canVote(id,p)?`<button class="btn gold playerPollConfirm" type="button" data-poll-confirm="${esc(id)}" ${disabled||same?"disabled":""}>${busy?"ENVIANDO…":prior?"CONFIRMAR ALTERAÇÃO":"CONFIRMAR VOTO"}</button>`:""}</footer>`;
   }
+  function resultReveal(p){
+    if(p?.status!=="closed")return "";
+    const tied=Array.isArray(p.winnerTiedOptionIds)?p.winnerTiedOptionIds:[];
+    if(p.winnerOptionId){
+      return `<div class="playerPollWinner"><span>ESCOLHA VENCEDORA</span><b>${esc(p.winnerLabel||"RESULTADO DEFINIDO")}</b>${p.winnerDescription?`<p>${esc(p.winnerDescription)}</p>`:""}</div>`;
+    }
+    if(tied.length){const labels=tied.map(id=>p.options?.[id]?.label||id).join(" · ");return `<div class="playerPollWinner tie"><span>RESULTADO FINAL</span><b>EMPATE</b><p>${esc(labels)}</p></div>`}
+    return `<div class="playerPollWinner noWinner"><span>RESULTADO FINAL</span><b>SEM VENCEDOR</b></div>`;
+  }
   function renderPoll(id,p){
-    return `<article class="playerPollCard" data-player-poll="${esc(id)}"><header><div><span>DCX // VOTAÇÃO ATIVA</span><h3>${esc(p.title||"Votação")}</h3></div><b data-player-poll-timer="${esc(id)}">${esc(countdownText(p))}</b></header>${p.description?`<p class="playerPollDescription">${esc(p.description)}</p>`:""}${p.visualMode==="pizza"?renderPizza(id,p):renderStandard(id,p)}${actionFooter(id,p)}</article>`;
+    const closed=p?.status==="closed";
+    return `<article class="playerPollCard ${closed?"closed":""}" data-player-poll="${esc(id)}"><header><div><span>DCX // ${closed?"RESULTADO DA VOTAÇÃO":"VOTAÇÃO ATIVA"}</span><h3>${esc(p.title||"Votação")}</h3></div><b ${closed?"":`data-player-poll-timer="${esc(id)}"`}>${esc(closed?"ENCERRADA":countdownText(p))}</b></header>${p.description?`<p class="playerPollDescription">${esc(p.description)}</p>`:""}${p.visualMode==="pizza"?renderPizza(id,p):renderStandard(id,p)}${closed?resultReveal(p):actionFooter(id,p)}</article>`;
   }
   function render(){
     const content=$("dcxPollsPlayerContent"), state=$("dcxPollsCardState"), badge=$("dcxPollsCardCount"), id=identity();
     playerId=id?.playerId||"";
-    const active=activeEntries();
-    if(state) state.textContent = auth?.currentUser ? (active.length ? `${active.length} ATIVA${active.length>1?"S":""}` : "NENHUMA ATIVA") : "CONECTE-SE";
+    const active=activeEntries(),closed=closedEntries();
+    if(state) state.textContent = auth?.currentUser ? (active.length ? `${active.length} ATIVA${active.length>1?"S":""}` : closed.length?`${closed.length} RESULTADO${closed.length>1?"S":""}`:"NENHUMA ATIVA") : "CONECTE-SE";
     if(badge){badge.textContent=String(active.length);badge.classList.toggle("hidden",active.length===0)}
     if(!content)return;
     if(!auth?.currentUser){content.innerHTML='<div class="dcxEmpty big">Conecte-se à sala para consultar votações.</div>';return}
     if(!playerId){content.innerHTML='<div class="dcxEmpty big">Identifique seu operador antes de votar.</div>';return}
-    if(!active.length){content.innerHTML='<div class="dcxEmpty big">Nenhuma votação ativa publicada pelo Keymaster.</div>';return}
-    content.innerHTML=active.map(([pid,p])=>renderPoll(pid,p)).join("");
+    if(!active.length&&!closed.length){content.innerHTML='<div class="dcxEmpty big">Nenhuma votação ou resultado publicado pelo Keymaster.</div>';return}
+    const activeHtml=active.length?`<div class="playerPollSectionLabel">ATIVAS // ${active.length}</div>${active.map(([pid,p])=>renderPoll(pid,p)).join("")}`:"";
+    const closedHtml=closed.length?`<div class="playerPollSectionLabel result">RESULTADOS // ${closed.length}</div>${closed.map(([pid,p])=>renderPoll(pid,p)).join("")}`:"";
+    content.innerHTML=activeHtml+closedHtml;
   }
   function tick(){
     document.querySelectorAll("[data-player-poll-timer]").forEach(el=>{
@@ -131,7 +147,7 @@ window.DCX = window.DCX || {};
   }
   function attachOwnVoteListeners(){
     if(!db||!room||!playerId)return;
-    const activeIds=new Set(activeEntries().map(([id])=>id));
+    const activeIds=new Set(visibleEntries().map(([id])=>id));
     Object.keys(voteRefs).forEach(id=>{if(!activeIds.has(id)){try{voteRefs[id].off()}catch(e){};delete voteRefs[id];delete ownVotes[id];delete selected[id]}});
     activeIds.forEach(id=>{
       if(voteRefs[id])return;
@@ -193,7 +209,7 @@ window.DCX = window.DCX || {};
     pollRef.on("value",snap=>{polls=snap.val()||{};attachOwnVoteListeners();render();tick()},err=>{
       console.error("Votações player listener",err);polls={};render();
     });
-    console.info("VOTAÇÕES V1.3 // REAL VOTE // LISTENER OK",{room,playerId,build:BUILD});
+    console.info("VOTAÇÕES V1.4 // RESULT PUBLISH // LISTENER OK",{room,playerId,build:BUILD});
     return true;
   }
   function init(){
