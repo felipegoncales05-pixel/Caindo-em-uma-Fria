@@ -18,10 +18,10 @@ let state=read();
 function save(){try{localStorage.setItem(STORE,JSON.stringify(state))}catch{}}
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function mount(){
- const host=document.querySelector('[data-km-view="yumiya"] .kmSingle');
+ const host=document.querySelector('[data-km-view="yuyu"] .kmSingle');
  if(!host||$('yuyuLab'))return;
  host.insertAdjacentHTML('afterbegin',`<section class="yuyuLab" id="yuyuLab">
- <div class="yuyuLabHead"><div><span class="tag">YUYU CORE // EXPERIMENTAL // LOCAL ONLY</span><h2>YUYU // CÉREBRO AUTOMÁTICO</h2><p>Configuração, personalidade e memória estão prontas localmente. A geração por IA ainda NÃO chama nenhum modelo: o backend seguro entra depois, junto da infraestrutura complexa.</p></div><span class="yuyuLabBadge" id="yuyuLabBadge">IA NÃO CONECTADA</span></div>
+ <div class="yuyuLabHead"><div><span class="tag">YUYU CORE // IA // EXPERIMENTAL</span><h2>YUYU // CÉREBRO AUTOMÁTICO</h2><p>Configuração, personalidade e memória estão prontas localmente. A geração por IA ainda NÃO chama nenhum modelo: o backend seguro entra depois, junto da infraestrutura complexa.</p></div><span class="yuyuLabBadge" id="yuyuLabBadge">IA NÃO CONECTADA</span></div>
  <div class="yuyuLabGrid">
   <div class="yuyuLabCard"><h3>CONTROLE DA AUTOMAÇÃO</h3><small>O modo fica salvo só neste Keymaster. Sem backend, ASSISTIDA/AUTO ficam armados mas não enviam mensagens sozinhos.</small><div class="yuyuModeRow"><button class="yuyuChoice" data-yuyu-mode="off">OFF</button><button class="yuyuChoice" data-yuyu-mode="assisted">ASSISTIDA</button><button class="yuyuChoice" data-yuyu-mode="auto">AUTOMÁTICA</button></div><div class="yuyuStatus" id="yuyuStatus"><i></i><b id="yuyuStatusText">OFF</b></div>
   <div class="yuyuLearnRow"><span class="yuyuMuted">APRENDIZADO:</span><button class="yuyuChoice" data-yuyu-learning="off">OFF</button><button class="yuyuChoice" data-yuyu-learning="supervised">SUPERVISIONADO</button><button class="yuyuChoice" data-yuyu-learning="auto">AUTOMÁTICO</button></div>
@@ -31,7 +31,7 @@ function mount(){
   <div class="yuyuLabCard"><h3>MEMORY ENGINE // LOCAL</h3><small>Aprenda agora sem tocar em Firebase. SUPERVISIONADO deixa tudo pendente até você aprovar.</small><div class="yuyuMemoryComposer"><select id="yuyuMemTarget"><option>GERAL</option>${Object.keys(relations).filter(x=>x!=='OUTROS').map(x=>`<option>${x}</option>`).join('')}</select><input id="yuyuMemText" maxlength="280" placeholder="Ex.: Kang gostou do apelido Kangzinho"><button class="btn" id="yuyuMemAdd" type="button">APRENDER</button></div><div class="yuyuMemoryList" id="yuyuMemoryList"></div></div>
   <div class="yuyuLabCard"><h3>CONTEXTO UTILIZADO // PREVIEW</h3><small>Mostra fatos e regras que seriam enviados ao modelo. Não mostra raciocínio interno.</small><textarea class="yuyuContext" id="yuyuContext" readonly></textarea><div class="actions" style="margin-top:8px"><button class="btn" id="yuyuCopyContext" type="button">COPIAR CONTEXTO</button><button class="btn red yuyuDanger" id="yuyuResetMemory" type="button">APAGAR MEMÓRIA LOCAL</button></div></div>
  </div>
- <div class="yuyuLabFoot"><span>BACKEND IA: <b>NÃO CONECTADO</b> // FIREBASE: <b>INTACTO</b></span><span>Remoção total: excluir yuyu-core.js/css e suas duas referências.</span></div>
+ <div class="yuyuLabFoot"><span>BACKEND IA: <b>NÃO CONECTADO</b> // FIREBASE: <b>INTACTO</b></span><span>Módulo separado do YUMIYA // REMOTE; pode ser removido sem afetar o canal manual.</span></div>
  </section>`);
  bind();render();
 }
@@ -70,6 +70,6 @@ function renderContext(){const approved=state.memories.filter(m=>m.status==='app
 'BACKEND: NÃO CONECTADO'
 ];$('yuyuContext').value=lines.join('\n')}
 function render(){document.querySelectorAll('[data-yuyu-mode]').forEach(b=>b.classList.toggle('active',b.dataset.yuyuMode===state.mode));document.querySelectorAll('[data-yuyu-learning]').forEach(b=>b.classList.toggle('active',b.dataset.yuyuLearning===state.learning));if($('yuyuOrixas'))$('yuyuOrixas').checked=!!state.orixas;const st=$('yuyuStatus'),txt=$('yuyuStatusText');if(st&&txt){st.className='yuyuStatus '+(state.mode==='off'?'off':'armed');txt.textContent=state.mode==='off'?'AUTOMAÇÃO OFF':`${state.mode==='auto'?'AUTO':'ASSISTIDA'} ARMADA // AGUARDANDO BACKEND`}$('yuyuLabBadge').textContent='IA NÃO CONECTADA';renderMemories();renderContext()}
-function init(){mount();console.info('[YUYU CORE] LAB V1 READY // LOCAL MEMORY + PERSONA // NO MODEL / NO FIREBASE')}
+function init(){mount();console.info('[YUYU CORE] SPLIT V1 READY // TAB YUYU // IA // REMOTE SEPARADO')}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();

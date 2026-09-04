@@ -137,7 +137,8 @@ window.DCX = window.DCX || {};
   function renderAll(){renderTabs();if(activeTab==="master")renderMaster();if(activeTab==="players")renderPlayers();if(activeTab==="teams")renderTeams();if(activeTab==="notes")renderNotes()}
   function copyPlayerLink(){const input=$("playerUrl");if(!input)return;navigator.clipboard?.writeText(input.value).then(()=>toast("LINK COPIADO")).catch(()=>{input.select();document.execCommand("copy");toast("LINK COPIADO")})}
 
-  window.DCX.Admin={switchTab,init,copyPlayerLink,setRequireKey,setAllowNew,setApproval,createKey,toggleKey,deleteKey,copyKey,createTeam,updateTeamField,deleteTeam,openAddMember,createNpc,deleteNpc,editRosterOperator,closeRosterEditor,saveRosterOperator,selectOperator,saveSelectedPlayer,removeSelectedPlayer,blockSelectedPlayer,unblockSelectedPlayer,selectNotesPlayer,selectAdminNote,createNoteForPlayer,saveAdminNote,deleteAdminNote};
+  function getSnapshot(){return {room,operators,teams,presence,selectedOperator};}
+  window.DCX.Admin={switchTab,init,copyPlayerLink,setRequireKey,setAllowNew,setApproval,createKey,toggleKey,deleteKey,copyKey,createTeam,updateTeamField,deleteTeam,openAddMember,createNpc,deleteNpc,editRosterOperator,closeRosterEditor,saveRosterOperator,selectOperator,saveSelectedPlayer,removeSelectedPlayer,blockSelectedPlayer,unblockSelectedPlayer,selectNotesPlayer,selectAdminNote,createNoteForPlayer,saveAdminNote,deleteAdminNote,getSnapshot};
   function bindTabs(){document.querySelectorAll(".kmWorkspaceTab").forEach(b=>{if(b.dataset.dcxBound)return;b.dataset.dcxBound="1";b.addEventListener("click",()=>switchTab(b.dataset.tab))});renderTabs()}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bindTabs,{once:true});else bindTabs();
 })();
