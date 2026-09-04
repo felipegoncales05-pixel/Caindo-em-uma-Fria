@@ -1,0 +1,45 @@
+DCX OS // VOTAÇÃO REAL V1
+BUILD: POLLS-V1.3-REAL-VOTE
+
+Base: ZIP exato enviado pelo usuário em 04/09/2026.
+
+O que foi conectado:
+- Player seleciona uma opção e confirma voto real.
+- Escrita: rooms/<room>/dcx/pollVotes/<pollId>/<playerId>
+- Payload: { choiceId, votedAt: ServerValue.TIMESTAMP }
+- Player lê apenas o próprio voto.
+- Keymaster lê todos os votos e calcula contagem/porcentagem.
+- Modo PADRÃO e PIZZA usam votos reais no Keymaster.
+- Se RESULTADO DURANTE VOTAÇÃO = VISÍVEL, agregados são publicados em dcx/meta/publicPolls para os jogadores.
+- Se resultados = OCULTOS, o Player vê somente o próprio voto, sem contagens globais.
+- allowVoteChange=false bloqueia alteração depois do primeiro voto.
+- Timer expirado bloqueia voto no Player; a MEGARULE também deve bloquear no servidor.
+- Excluir/auto-delete de votação também remove pollVotes/<pollId>.
+
+Arquivos alterados:
+- index.html
+- keymaster.html
+- polls-player.js
+- polls-player.css
+- polls-admin.js
+
+Não alterado:
+- config.js
+- realtime.js
+- state.js
+- Firebase Rules
+- Auth / UID
+- Yuyu
+
+Teste recomendado:
+1. Keymaster cria votação com 2+ opções.
+2. Inicia votação.
+3. Player abre DCX > VOTAÇÕES.
+4. Seleciona uma opção e confirma.
+5. Keymaster deve atualizar imediatamente o total.
+6. Testar segundo jogador.
+7. Testar allowVoteChange ligado/desligado.
+8. Testar resultados VISÍVEIS e OCULTOS.
+9. Testar timer curto (ex.: 20 s) e tentativa após expirar.
+
+Se aparecer PERMISSION_DENIED ao confirmar voto, o frontend está correto mas a MEGARULE publicada não está aceitando pollVotes para aquele P-ID/UID. Verificar agentLinks ou fallback requests/<uid>/identity/playerId.
