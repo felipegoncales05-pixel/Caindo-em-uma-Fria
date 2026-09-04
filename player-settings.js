@@ -1,7 +1,7 @@
 (()=>{
   'use strict';
   const STORE='dcx-player-settings-v1';
-  const THEMES=['arc-cyan','dcx-green','ember-amber','void-violet','frost-blue','crimson-ruby','neon-rose','ghost-mono'];
+  const THEMES=['arc-cyan','dcx-green','ember-amber','void-violet','frost-blue','crimson-ruby','neon-rose','ghost-mono','solar-gold','toxic-lime','ocean-teal','dusk-wine'];
   const DENSITIES=['comfortable','compact'];
   const DEFAULTS={theme:'arc-cyan',density:'comfortable'};
   const $=id=>document.getElementById(id);
@@ -12,7 +12,7 @@
   function syncUI(){
     document.querySelectorAll('[data-theme-choice]').forEach(btn=>{const active=btn.dataset.themeChoice===state.theme;btn.classList.toggle('active',active);btn.setAttribute('aria-pressed',String(active));const badge=btn.querySelector('.settingsSelected');if(badge)badge.textContent=active?'ATIVO':'USAR'});
     document.querySelectorAll('[data-density-choice]').forEach(btn=>{const active=btn.dataset.densityChoice===state.density;btn.classList.toggle('active',active);btn.setAttribute('aria-pressed',String(active))});
-    const label=$('playerSettingsCurrent');if(label){const names={'arc-cyan':'ARC // CIANO','dcx-green':'DCX // VERDE','ember-amber':'EMBER // ÂMBAR','void-violet':'VOID // VIOLETA','frost-blue':'FROST // AZUL','crimson-ruby':'CRIMSON // RUBI','neon-rose':'NEON // ROSA','ghost-mono':'GHOST // MONO'};label.textContent=`${names[state.theme]} // ${state.density==='compact'?'COMPACTO':'CONFORTÁVEL'}`}
+    const label=$('playerSettingsCurrent');if(label){const names={'arc-cyan':'ARC // CIANO','dcx-green':'DCX // VERDE','ember-amber':'EMBER // ÂMBAR','void-violet':'VOID // VIOLETA','frost-blue':'FROST // AZUL','crimson-ruby':'CRIMSON // RUBI','neon-rose':'NEON // ROSA','ghost-mono':'GHOST // MONO','solar-gold':'SOLAR // DOURADO','toxic-lime':'TOXIC // LIMA','ocean-teal':'OCEAN // TURQUESA','dusk-wine':'DUSK // VINHO'};label.textContent=`${names[state.theme]} // ${state.density==='compact'?'COMPACTO':'CONFORTÁVEL'}`}
   }
   function setTheme(theme){if(!THEMES.includes(theme))return;state.theme=theme;persist();apply()}
   function setDensity(density){if(!DENSITIES.includes(density))return;state.density=density;persist();apply()}
@@ -26,7 +26,7 @@
     $('playerOpenKeymaster')?.addEventListener('click',()=>window.DCX?.Navigation?.goKeymaster?.());
     document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('dcxSettingsPanel')?.classList.contains('hidden'))toggle(false)});
   }
-  function init(){apply(false);bind();syncUI();console.info('[DCX OS] PLAYER SETTINGS V3 // QUICK ACCESS + 8 THEMES + DENSITY // LOCAL ONLY')}
+  function init(){apply(false);bind();syncUI();console.info('[DCX OS] PLAYER SETTINGS V4 // QUICK ACCESS + 12 THEMES + DENSITY // LOCAL ONLY')}
   window.DCX=window.DCX||{};window.DCX.PlayerSettings={toggle,setTheme,setDensity,reset,get state(){return{...state}}};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();

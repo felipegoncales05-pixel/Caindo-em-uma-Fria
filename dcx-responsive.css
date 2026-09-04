@@ -1,0 +1,36 @@
+/* DCX RESPONSIVE LAYER // additive only. Desktop remains canonical. */
+:root{--dcx-touch:40px}
+@media (pointer:coarse){:root{--dcx-touch:44px}.btn,.chatIconBtn,.playerWorkspaceTab,.kmWorkspaceTab,.dcxModuleCard{min-height:var(--dcx-touch)}}
+@media (max-width:1200px){
+ .kmWorkspaceTabs{overflow-x:auto;scrollbar-width:thin}.kmWorkspaceTab{flex:0 0 auto}
+ .dcxWorkspaceGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ .qolCredential{width:min(860px,96vw)}
+}
+@media (max-width:768px){
+ body{overflow-x:hidden}.top{align-items:flex-start;gap:10px}.top .brand{min-width:0}.top .actions{flex-wrap:wrap;justify-content:flex-end}
+ .roomBar{display:grid!important;grid-template-columns:1fr auto;gap:8px}.roomBar>b{grid-column:1/-1}.roomBar input{min-width:0;width:100%}
+ .playerWorkspaceTabs,.kmWorkspaceTabs{overflow-x:auto;display:flex!important;flex-wrap:nowrap!important;scroll-snap-type:x proximity;padding-bottom:4px}.playerWorkspaceTab,.kmWorkspaceTab{flex:0 0 auto;scroll-snap-align:start}
+ .dcxWorkspaceGrid{grid-template-columns:1fr!important}.dcxWorkspaceHero{grid-template-columns:1fr!important}.dcxWorkspaceSeal{justify-self:start!important}
+ .dcxTeamPanel,.dcxNotesPanel,.dcxPollsPanel,.dcxSettingsPanel,.dcxLocalPanel{inset:8px!important;max-height:calc(100vh - 16px)!important;border-radius:14px!important}
+ .dcxNotesLayout{grid-template-columns:1fr!important}.dcxPlayerNoteList{max-height:200px!important;border-right:0!important;border-bottom:1px solid var(--ps-line,#294c63)}
+ .yumiyaChat{width:min(96vw,760px)!important;max-height:92vh!important}.yumiyaChatHead{gap:8px}.yumiyaPortraitStage{min-width:0}
+ .qolCredBody{grid-template-columns:1fr!important}.qolCredPhoto{width:min(260px,75vw);justify-self:center}.qolCredGrid{grid-template-columns:1fr!important}
+ .kmQolTools{grid-template-columns:1fr!important}.kmQuickActions{justify-content:flex-start}
+ .pollsAdminGrid,.commsAdminGrid,.kmAffectGrid{grid-template-columns:1fr!important}
+ .qolShortcutGuide{width:min(96vw,720px)!important;max-height:92vh;overflow:auto}
+}
+@media (max-width:480px){
+ .top{padding:8px!important}.brand small{font-size:7px!important}.brand b{font-size:10px!important}.top .actions{width:100%;justify-content:flex-start}.top .actions>.btn,.top .actions>button{font-size:8px!important}
+ .qolIdentityChip{max-width:100%}.qolIdentityMeta b{max-width:105px!important}
+ .screen,.side,.adminPanel,.dcxPanel{border-radius:10px!important}.view{padding:12px!important}.title{font-size:clamp(24px,10vw,42px)!important}
+ .dcxWorkspaceHero{padding:16px!important}.dcxWorkspaceHero h1{font-size:28px!important}.dcxModuleCard{grid-template-columns:44px 1fr!important;gap:10px!important}.dcxModuleState{grid-column:2!important;justify-self:start!important;margin-top:3px}
+ .settingsThemeGrid,.settingsDensityGrid,.qolSettingsGrid{grid-template-columns:1fr!important}
+ .qolCredBackdrop{padding:8px!important}.qolCredential{width:100%!important;max-height:96vh!important;border-radius:14px!important}.qolCredBody{padding:14px!important;gap:14px!important}.qolCredName{font-size:30px!important}
+ .dcxDock{left:8px!important;right:8px!important;bottom:max(8px,env(safe-area-inset-bottom))!important;justify-content:center}.dcxDockBtn{flex:1;min-width:0}
+ .qolBackTop{right:10px!important;bottom:76px!important}
+ .kmSingle,.kmGrid{padding-left:8px!important;padding-right:8px!important}.dcxPanel,.adminPanel{padding:12px!important}.dcxPanelHead{align-items:flex-start!important;gap:8px!important;flex-direction:column}.dcxPanelHead>.actions{width:100%;flex-wrap:wrap}
+ .yuyuLabGrid{padding:9px!important}.yuyuLabHead{padding:12px!important;flex-direction:column}.yuyuLabBadge{align-self:flex-start}
+}
+@media (max-height:520px) and (orientation:landscape){.dcxTeamPanel,.dcxNotesPanel,.dcxPollsPanel,.dcxSettingsPanel,.dcxLocalPanel,.yumiyaChat{max-height:96vh!important}.qolCredential{max-height:96vh!important}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
+@supports(padding:max(0px)){body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}}

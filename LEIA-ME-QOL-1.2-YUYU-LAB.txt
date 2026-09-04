@@ -1,0 +1,41 @@
+DCX OS // QOL 1.2 + YUYU CORE LAB
+
+BASE: QOL OVERHAUL V1.1
+
+ENTRA NESTA BUILD (SEM FIREBASE NOVO):
+- HOTFIX robusto das Credenciais DCX do Player.
+- 12 temas visuais (8 anteriores + SOLAR, TOXIC, OCEAN, DUSK).
+- camada responsiva isolada para desktop/tablet/mobile.
+- Command Palette (Ctrl+K / Alt+Space).
+- Nota rápida local (Ctrl+Shift+N no Player).
+- modo sessão, fullscreen e diagnóstico local.
+- versão do cliente visível para debug.
+- YUYU CORE LAB no Keymaster > YUMIYA // REMOTE.
+- Memory Engine local da Yuyu.
+- persona/relações/política de disclosure travadas no laboratório.
+- modos OFF / ASSISTIDA / AUTOMÁTICA como configuração desejada.
+- canal privado Orixas como flag de contexto.
+- preview de contexto utilizado.
+
+IMPORTANTE SOBRE A YUYU:
+A geração por IA de verdade AINDA NÃO ESTÁ CONECTADA nesta build.
+Não existe API key, chamada a modelo, Firebase novo ou backend embutido.
+ASSISTIDA/AUTO ficam apenas "armadas" e não enviam respostas sozinhas.
+Isto é proposital para não expor segredo/API no GitHub Pages.
+
+REMOVER YUYU COMPLETAMENTE:
+1. remover yuyu-core.js
+2. remover yuyu-core.css
+3. remover as referências desses dois arquivos em keymaster.html
+O restante do sistema continua funcionando.
+
+FIREBASE/CORE NÃO ALTERADOS:
+config.js
+realtime.js
+state.js
+keymaster.js
+dcx-admin.js
+player.js
+dcx-player.js
+
+NENHUM ARQUIVO DE FIREBASE RULES ESTÁ INCLUÍDO.
