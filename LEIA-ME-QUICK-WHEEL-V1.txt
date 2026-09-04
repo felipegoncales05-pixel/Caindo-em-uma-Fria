@@ -1,0 +1,41 @@
+DCX OS // QUICK WHEEL V1
+
+USO
+- Segure ALT: abre a wheel.
+- Passe o mouse por cima de uma fatia e solte ALT: abre a opção.
+- Clique numa fatia: abre imediatamente.
+- ALT + letra: abre diretamente a opção.
+- Centro / ALT + K: guia de atalhos.
+- ESC: cancela.
+
+PLAYER
+G GOLPE
+D DCX
+Y YUMIYA
+C CREDENCIAIS
+V VOTAÇÕES
+N NOTAS
+T EQUIPE
+H HANDOUTS
+S CONFIG
+F FOCUS
+K GUIA (centro)
+
+KEYMASTER
+M MASTER
+O OPERAÇÃO
+P PLAYER DATA
+T EQUIPES
+C CREDENCIAIS
+H HANDOUTS
+V VOTAÇÕES
+I YUYU // IA
+Y YUMIYA // REMOTE
+S CONFIG
+K GUIA (centro)
+
+SEGURANÇA / ESCOPO
+- UI local apenas.
+- Não altera Firebase, Auth, UID, Rules, state ou realtime.
+- Não abre em login/Key gate.
+- Não captura atalhos enquanto o foco está em input/textarea/select/editor.

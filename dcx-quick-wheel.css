@@ -1,0 +1,35 @@
+/* DCX OS // QUICK WHEEL V1 — local navigation only */
+.dcxQuickWheelBackdrop{
+  --qw-accent:var(--ps-accent,var(--km-accent,#63dfff));
+  --qw-accent2:var(--ps-accent2,var(--km-accent2,#8ba7ff));
+  --qw-panel:var(--ps-panel,var(--km-panel,#091827));
+  --qw-panel2:var(--ps-panel2,var(--km-panel2,#0c2132));
+  --qw-line:var(--ps-line2,var(--km-line2,#3a708b));
+  --qw-text:var(--ps-text,var(--km-text,#edf9ff));
+  --qw-muted:var(--ps-muted,var(--km-muted,#89aabc));
+  position:fixed;inset:0;z-index:3200;display:grid;place-items:center;
+  background:radial-gradient(circle at center,color-mix(in srgb,var(--qw-accent) 7%,#000b) 0,#000d 62%,#000e 100%);
+  backdrop-filter:blur(8px) saturate(.8);opacity:0;pointer-events:none;
+  transition:opacity .12s ease;
+}
+.dcxQuickWheelBackdrop.open{opacity:1;pointer-events:auto}
+.dcxQuickWheelWrap{position:relative;width:min(650px,94vw);aspect-ratio:1;display:grid;place-items:center;filter:drop-shadow(0 34px 80px #000d);transform:scale(.94);transition:transform .14s ease}
+.dcxQuickWheelBackdrop.open .dcxQuickWheelWrap{transform:scale(1)}
+.dcxQuickWheelSvg{width:100%;height:100%;overflow:visible;user-select:none;-webkit-user-select:none}
+.dcxQuickWheelSector{cursor:pointer;outline:none}
+.dcxQuickWheelSector path{fill:color-mix(in srgb,var(--qw-panel2) 82%,#000 18%);stroke:var(--qw-line);stroke-width:1.6;transition:fill .11s,stroke .11s,filter .11s,transform .11s;transform-origin:300px 300px}
+.dcxQuickWheelSector:hover path,.dcxQuickWheelSector.selected path{fill:color-mix(in srgb,var(--qw-accent) 27%,var(--qw-panel2));stroke:var(--qw-accent);filter:drop-shadow(0 0 11px color-mix(in srgb,var(--qw-accent) 50%,transparent));transform:scale(1.018)}
+.dcxQuickWheelSector text{pointer-events:none;text-anchor:middle;dominant-baseline:middle;fill:var(--qw-text);font-family:ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase}
+.dcxQuickWheelSector .qwKey{font-size:23px;font-weight:1000;fill:var(--qw-accent)}
+.dcxQuickWheelSector .qwLabel{font-size:10.5px;font-weight:900;letter-spacing:.04em}
+.dcxQuickWheelSector.selected .qwKey,.dcxQuickWheelSector:hover .qwKey{fill:var(--qw-text)}
+.dcxQuickWheelCenter{position:absolute;width:29%;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;text-align:center;padding:14px;border:1px solid var(--qw-line);background:radial-gradient(circle at 38% 30%,color-mix(in srgb,var(--qw-accent) 16%,var(--qw-panel2)),var(--qw-panel) 70%);color:var(--qw-text);box-shadow:inset 0 0 28px #0007,0 0 0 8px #0005;cursor:pointer;transition:.12s}
+.dcxQuickWheelCenter:hover,.dcxQuickWheelCenter.selected{border-color:var(--qw-accent);box-shadow:inset 0 0 28px #0007,0 0 28px color-mix(in srgb,var(--qw-accent) 25%,transparent)}
+.dcxQuickWheelCenter small,.dcxQuickWheelCenter b,.dcxQuickWheelCenter span{display:block}.dcxQuickWheelCenter small{font:850 7px/1 ui-monospace,monospace;color:var(--qw-accent);letter-spacing:.11em}.dcxQuickWheelCenter b{margin-top:7px;font:1000 clamp(11px,2vw,16px)/1.05 ui-monospace,monospace}.dcxQuickWheelCenter span{margin-top:7px;font:750 7px/1.35 ui-monospace,monospace;color:var(--qw-muted)}
+.dcxQuickWheelHint{position:absolute;left:50%;bottom:1.8%;transform:translateX(-50%);white-space:nowrap;border:1px solid var(--qw-line);border-radius:999px;padding:7px 11px;background:#000a;color:var(--qw-muted);font:800 7px/1 ui-monospace,monospace;letter-spacing:.05em}
+.dcxQuickWheelHint kbd{color:var(--qw-accent);font:1000 8px/1 ui-monospace,monospace}
+.dcxQuickWheelBackdrop[data-mode="keymaster"] .dcxQuickWheelWrap{width:min(700px,95vw)}
+body.dcxQuickWheelOpen{overflow:hidden}
+@media(max-width:680px){.dcxQuickWheelWrap{width:min(96vw,560px)}.dcxQuickWheelSector .qwLabel{font-size:9px}.dcxQuickWheelSector .qwKey{font-size:20px}.dcxQuickWheelCenter{width:31%;padding:10px}.dcxQuickWheelHint{bottom:-1%;font-size:6.5px}}
+@media(max-width:460px){.dcxQuickWheelSector .qwLabel{font-size:7.8px}.dcxQuickWheelSector .qwKey{font-size:17px}.dcxQuickWheelCenter span{display:none}.dcxQuickWheelHint{white-space:normal;text-align:center;width:82%}}
+html[data-dcx-reduced-motion="true"] .dcxQuickWheelBackdrop,html[data-dcx-reduced-motion="true"] .dcxQuickWheelWrap,html[data-dcx-reduced-motion="true"] .dcxQuickWheelSector path{transition:none!important}
