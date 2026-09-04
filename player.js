@@ -442,7 +442,7 @@ console.info("[DCX OS] A2.2 AUTH ISOLATION // PLAYER // YUMIYA CORE FINAL-11");
     const newest=remoteVisible.reduce((n,m)=>Math.max(n,+m.ts||+m.hostTs||0),0);
     if(newest>lastSeenCommsTs && !chatOpen){
       unread += remoteVisible.filter(m=>(+m.ts||+m.hostTs||0)>lastSeenCommsTs).length;
-      if(unread){$("yumiyaUnread").textContent=String(Math.min(unread,99));$("yumiyaUnread").classList.remove("hidden");beep(820,.05)}
+      if(unread){$("yumiyaUnread").textContent=String(Math.min(unread,99));$("yumiyaUnread").classList.remove("hidden")}
     }
     lastSeenCommsTs=Math.max(lastSeenCommsTs,newest);
 

@@ -44,7 +44,7 @@ window.DCX = window.DCX || {};
     }catch(e){console.error("DCX Player init",e);return false}
   }
 
-  function renderTeams(){const box=$("dcxTeamContent");if(!box)return;const entries=Object.entries(teams||{}).filter(([id])=>id!=="_init");if(!entries.length){box.innerHTML=`<div class="dcxEmpty big">Nenhuma equipe operacional publicada.</div>`;return}box.innerHTML=entries.map(([tid,t])=>{const members=Object.entries(operators||{}).filter(([id,op])=>narrative(op).teamId===tid&&narrative(op).visible!==false);return `<article class="dcxPlayerTeamCard"><div class="dcxPlayerTeamHead"><div><span>${esc(t.codename||"EQUIPE")}</span><h3>${esc(t.name||tid)}</h3></div><b>${esc(t.status||"OPERACIONAL")}</b></div>${t.description?`<p>${esc(t.description)}</p>`:""}<div class="dcxPlayerRoster">${members.map(([id,op])=>{const n=narrative(op),me=id===playerId;return `<div class="dcxPlayerMember ${me?"self":""}"><div><b>${esc(operatorName(op,id))}${me?" · VOCÊ":""}</b><small>${esc(n.role||"OPERADOR")}${n.location?` · ${esc(n.location)}`:""}</small></div><span>${esc(n.status||"OPERACIONAL")}</span><em>${esc(n.commsStatus||"ONLINE")}</em></div>`}).join("")||`<div class="dcxEmpty">Sem membros visíveis.</div>`}</div></article>`}).join("")}
+  function renderTeams(){const box=$("dcxTeamContent");if(!box)return;const entries=Object.entries(teams||{}).filter(([id])=>id!=="_init");if(!entries.length){box.innerHTML=`<div class="dcxEmpty big">Nenhuma equipe operacional publicada.</div>`;return}box.innerHTML=entries.map(([tid,t])=>{const members=Object.entries(operators||{}).filter(([id,op])=>narrative(op).teamId===tid&&narrative(op).visible!==false);return `<article class="dcxPlayerTeamCard"><div class="dcxPlayerTeamHead"><div><span>${esc(t.codename||"EQUIPE")}</span><h3>${esc(t.name||tid)}</h3></div><b>${esc(t.status||"OPERACIONAL")}</b></div>${t.description?`<p>${esc(t.description)}</p>`:""}<div class="dcxPlayerRoster">${members.map(([id,op])=>{const n=narrative(op),me=id===playerId;return `<div class="dcxPlayerMember ${me?"self":""}" data-credential-pid="${esc(id)}" role="button" tabindex="0"><div><b>${esc(operatorName(op,id))}${me?" · VOCÊ":""}</b><small>${esc(n.role||"OPERADOR")}${n.location?` · ${esc(n.location)}`:""}</small></div><span>${esc(n.status||"OPERACIONAL")}</span><em>${esc(n.commsStatus||"ONLINE")}</em></div>`}).join("")||`<div class="dcxEmpty">Sem membros visíveis.</div>`}</div></article>`}).join("")}
   function toggleTeam(force){const p=$("dcxTeamPanel");if(!p)return;const open=typeof force==="boolean"?force:p.classList.contains("hidden");p.classList.toggle("hidden",!open);if(open)renderTeams()}
 
   function noteEntries(){return Object.entries(notes||{}).filter(([id])=>id!=="_init").sort((a,b)=>(Number(b[1]?.updatedAt)||0)-(Number(a[1]?.updatedAt)||0))}
@@ -56,6 +56,25 @@ window.DCX = window.DCX || {};
   async function deleteNote(){if(!selectedNote||!confirm("Excluir esta anotação?"))return;try{await ref(`notes/${playerId}/${selectedNote}`).remove();selectedNote="";renderNotes()}catch(e){toast("FALHA AO EXCLUIR")}}
   function exportNote(){const n=notes[selectedNote];if(!n)return;const title=$("dcxPlayerNoteTitle")?.value||n.title||"Anotação",body=$("dcxPlayerNoteBody")?.value||n.body||"";const w=window.open("","_blank","width=800,height=900");if(!w)return toast("POP-UP BLOQUEADO");w.document.write(`<!doctype html><html><head><title>${esc(title)}</title><style>body{font-family:Arial,sans-serif;margin:48px;color:#111}small{color:#666}h1{margin:8px 0 24px}pre{white-space:pre-wrap;font:16px/1.6 Arial,sans-serif}</style></head><body><small>DCX // OPERAÇÃO H // BLOCO DE CAMPO</small><h1>${esc(title)}</h1><p><b>Operador:</b> ${esc(name)}</p><pre>${esc(body)}</pre><script>setTimeout(()=>window.print(),250)<\/script></body></html>`);w.document.close()}
 
+
+  function getCredentialData(id=playerId){
+    id=String(id||playerId||"");
+    const op=operators?.[id]||{};
+    const n=narrative(op);
+    const t=n.teamId?teams?.[n.teamId]:null;
+    const type=op?.identity?.type||(id.startsWith("NPC-")?"npc":"player");
+    const fallbackName=id===playerId?(name||localStorage.getItem("oph-name")||id):id;
+    return {
+      id,playerId:id,type,
+      name:operatorName(op,id)||fallbackName,
+      teamId:n.teamId||"",teamName:t?.name||"",teamCode:t?.codename||"",
+      role:n.role||"OPERADOR",status:n.status||"OPERACIONAL",location:n.location||"",
+      commsStatus:n.commsStatus||"ONLINE",visible:n.visible!==false,isSelf:id===playerId,
+      room
+    };
+  }
+  function getLocalIdentity(){return {playerId,name,room,connected};}
+
   ["pointerdown","keydown","touchstart"].forEach(ev=>window.addEventListener(ev,touch,{passive:true}));document.addEventListener("visibilitychange",()=>{touch();heartbeat()});window.addEventListener("focus",()=>{touch();heartbeat()});window.addEventListener("blur",heartbeat);
-  window.DCX.Player={bootstrap,submitAccess,init,toggleTeam,toggleNotes,newNote,selectNote,saveNote,deleteNote,exportNote};
+  window.DCX.Player={bootstrap,submitAccess,init,toggleTeam,toggleNotes,newNote,selectNote,saveNote,deleteNote,exportNote,getCredentialData,getLocalIdentity};
 })();

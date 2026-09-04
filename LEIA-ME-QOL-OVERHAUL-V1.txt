@@ -1,0 +1,36 @@
+DCX OS // QOL OVERHAUL V1 // LOCAL BASELINE
+
+Esta build consolida apenas mudanças locais/de HUD.
+NÃO altera Firebase Rules, Auth, UID administrativo, realtime.js, config.js ou state.js.
+
+PLAYER
+- Credenciais DCX em formato de crachá.
+- Cabeçalho compacto com avatar, nome, P-ID e estado de conexão.
+- Avatar local (redimensionado e salvo no navegador).
+- Clicar em membros de Equipe // Status abre o crachá público textual.
+- 8 temas: ARC/Ciano, DCX/Verde, Ember/Âmbar, Void/Violeta, Frost/Azul, Crimson/Rubi, Neon/Rosa, Ghost/Mono.
+- HUD confortável/compacta preservada.
+- Beeps locais da Yu Bot com AudioContext persistente, volume e liga/desliga.
+- Focus Mode mais limpo.
+- Atalhos: Alt+C Credenciais, Alt+S Config, Alt+Y Yumiya, Alt+G GOLPE, Alt+D DCX, Alt+F Focus, Shift+N Keymaster.
+- Voltar ao topo e memória da última área GOLPE/DCX.
+
+KEYMASTER
+- 8 temas + HUD confortável/compacta dentro de CONFIGURAÇÕES.
+- Quick Control no MASTER com busca e atalhos de navegação.
+- Atalhos: Alt+M Master, Alt+O Operação, Alt+P Player Data, Alt+T Equipes, Alt+H Handouts, Alt+V Votações, Alt+Y Yu Bot, Alt+S Config, Shift+N Player.
+- Memória da última aba.
+- UI local de crachá/foto para NPC dentro do editor do NPC.
+- Voltar ao topo.
+
+LIMITES PROPOSITAIS ATÉ A MEGARULE
+- Avatares de jogadores NÃO são compartilhados entre dispositivos/jogadores ainda.
+- Foto/crachá de NPC é local do Keymaster.
+- Agent Auth, voto real, Handout real, notificações sincronizadas e canal de equipe real continuam pendentes.
+- Nenhuma senha/login é exibida ou compartilhada.
+
+ARQUIVOS NOVOS
+- dcx-qol-overhaul.css
+- dcx-qol-overhaul.js
+
+BASELINE: QOL1
