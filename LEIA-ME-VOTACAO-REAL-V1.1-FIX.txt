@@ -1,0 +1,10 @@
+VOTAÇÃO REAL V1.1 FIX
+
+Correções:
+- Keymaster sempre mostra contagem real, mesmo quando resultados estão ocultos dos jogadores.
+- Timer do Keymaster atualiza tanto no cabeçalho quanto dentro do preview.
+- Player verifica no Firebase se o voto realmente persistiu antes de exibir sucesso.
+- Console mostra caminho/UID/P-ID do voto para diagnóstico.
+- Cache bump POLLSV131FIX.
+
+Não altera Firebase Rules, Auth, UID, realtime.js ou state.js.

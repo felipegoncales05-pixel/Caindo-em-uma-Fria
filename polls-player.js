@@ -1,6 +1,6 @@
 window.DCX = window.DCX || {};
 (() => {
-  const BUILD = "POLLS-V1.3-REAL-VOTE";
+  const BUILD = "POLLS-V1.3.1-REAL-VOTE-FIX";
   const $ = id => document.getElementById(id);
   const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const palette = ["#67dcff","#ffcf66","#ff7f9a","#8cffaa","#c499ff","#ff9b66","#7bb3ff","#f7f07a"];
@@ -147,15 +147,26 @@ window.DCX = window.DCX || {};
   async function confirmVote(pollId){
     const p=polls?.[pollId],choiceId=selected[pollId];
     if(!p||!choiceId||!canVote(pollId,p)||sending.has(pollId))return;
-    if(!p.options?.[choiceId]){toast("OPÇÃO INVÁLIDA");return}
+    const validOption=optionEntries(p).some(o=>o.id===choiceId);
+    if(!validOption){toast("OPÇÃO INVÁLIDA");return}
     const prior=currentChoice(pollId);if(prior===choiceId){toast("ESSE JÁ É O SEU VOTO");return}
+    if(!db||!auth?.currentUser||!playerId){toast("VOTO // IDENTIDADE NÃO PRONTA");return}
     sending.add(pollId);render();
+    const votePath=`rooms/${room}/dcx/pollVotes/${pollId}/${playerId}`;
     try{
-      const vr=db.ref(`rooms/${room}/dcx/pollVotes/${pollId}/${playerId}`);
-      await vr.set({choiceId,votedAt:firebase.database.ServerValue.TIMESTAMP});
-      toast(prior?"VOTO ALTERADO // REGISTRADO":"VOTO REGISTRADO");
+      const vr=db.ref(votePath);
+      console.info("VOTAÇÃO // ENVIANDO VOTO",{votePath,pollId,playerId,choiceId,uid:auth.currentUser.uid});
+      await vr.set({choiceId,votedAt:window.firebase.database.ServerValue.TIMESTAMP});
+      const verify=await vr.once("value");
+      const saved=verify.val();
+      if(!saved||saved.choiceId!==choiceId)throw Object.assign(new Error("Voto não persistiu após confirmação do Firebase"),{code:"vote/not-persisted"});
+      ownVotes[pollId]=saved;selected[pollId]=choiceId;
+      console.info("VOTAÇÃO // VOTO CONFIRMADO NO FIREBASE",{pollId,playerId,choiceId,votedAt:saved.votedAt});
+      toast(prior?"VOTO ALTERADO // FIREBASE OK":"VOTO REGISTRADO // FIREBASE OK");
     }catch(e){
-      console.error("Falha ao votar",e);toast(`VOTO RECUSADO // ${e.code||"ERRO"}`);
+      console.error("Falha ao votar",e,{pollId,playerId,choiceId,room});
+      const code=String(e?.code||"ERRO").replace(/^PERMISSION_DENIED$/i,"PERMISSION_DENIED");
+      toast(`VOTO RECUSADO // ${code}`);
       if(prior)selected[pollId]=prior;
     }finally{sending.delete(pollId);render()}
   }

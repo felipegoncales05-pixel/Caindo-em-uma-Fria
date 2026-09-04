@@ -1,6 +1,6 @@
 window.DCX = window.DCX || {};
 (() => {
-  const BUILD = "POLLS-V1.3-REAL-VOTE";
+  const BUILD = "POLLS-V1.3.1-REAL-VOTE-FIX";
   const MAX_DURATION_SECONDS = 86400;
   const MAX_RETENTION_HOURS = 720;
   const $ = id => document.getElementById(id);
@@ -155,20 +155,27 @@ window.DCX = window.DCX || {};
   }
   function syncRetentionUI(){const auto=$("pollRetentionMode")?.value==="auto";$("pollRetentionHoursWrap")?.classList.toggle("disabled",!auto);if($("pollRetentionHours"))$("pollRetentionHours").disabled=!auto}
 
-  function previewCard(p,{result=false}={}){
+  function liveTimerText(p){
+    if(!p?.endsAt)return "SEM TIMER";
+    const sec=Math.max(0,Math.ceil((Number(p.endsAt)-Date.now())/1000));
+    if(sec>0)return fmtDuration(sec);
+    return p.closeMode==="manual"?"TEMPO ESGOTADO // AGUARDANDO KEYMASTER":"ENCERRANDO…";
+  }
+  function previewCard(p,{result=false,admin=false}={}){
     const opts=optionEntries(p),counts=voteCounts(p),total=Object.values(counts).reduce((a,b)=>a+b,0), winner=p.winnerOptionId||"";
-    const remaining=p.status==="active"&&p.endsAt?Math.max(0,Math.ceil((p.endsAt-Date.now())/1000)):p.durationSeconds||0;
-    const timer=p.status==="active"?(remaining>0?fmtDuration(remaining):(p.closeMode==="manual"?"TEMPO ESGOTADO // AGUARDANDO KEYMASTER":"ENCERRANDO…")):fmtDuration(p.durationSeconds||0);
+    const timer=p.status==="active"?liveTimerText(p):fmtDuration(p.durationSeconds||0);
+    const revealCounts=admin||p.resultsVisibility==="visible"||result;
     let body="";
     if(p.visualMode==="pizza"){
       let acc=0;const segments=[];if(total>0){opts.forEach((o,i)=>{const pct=(counts[o.id]||0)/total*100;segments.push(`${palette[i%palette.length]} ${acc}% ${acc+pct}%`);acc+=pct})}
       const bg=segments.length?`conic-gradient(${segments.join(",")})`:`#17303d`;
-      body=`<div class="pollDonutWrap"><div class="pollDonut" style="background:${bg}"><div><b>${total}</b><small>VOTO(S)</small></div></div><div class="pollLegend">${opts.map((o,i)=>`<div><i style="background:${palette[i%palette.length]}"></i><span>${esc(o.label)}</span>${p.resultsVisibility==="visible"||result?`<b>${total?Math.round((counts[o.id]||0)/total*100):0}%</b>`:""}</div>`).join("")}</div></div>`;
+      body=`<div class="pollDonutWrap"><div class="pollDonut" style="background:${bg}"><div><b>${total}</b><small>VOTO(S)</small></div></div><div class="pollLegend">${opts.map((o,i)=>`<div><i style="background:${palette[i%palette.length]}"></i><span>${esc(o.label)}</span>${revealCounts?`<b>${counts[o.id]||0} · ${total?Math.round((counts[o.id]||0)/total*100):0}%</b>`:""}</div>`).join("")}</div></div>`;
     } else {
-      body=`<div class="pollStandardOptions">${opts.map(o=>{const pct=total?Math.round((counts[o.id]||0)/total*100):0;return`<article class="pollPlayerOption ${winner===o.id?"winner":""}"><div><b>${esc(o.label)}</b>${o.description?`<p>${esc(o.description)}</p>`:""}</div>${p.resultsVisibility==="visible"||result?`<span>${counts[o.id]||0} · ${pct}%</span>`:"<span>VOTAR</span>"}</article>`}).join("")}</div>`;
+      body=`<div class="pollStandardOptions">${opts.map(o=>{const pct=total?Math.round((counts[o.id]||0)/total*100):0;return`<article class="pollPlayerOption ${winner===o.id?"winner":""}"><div><b>${esc(o.label)}</b>${o.description?`<p>${esc(o.description)}</p>`:""}</div>${revealCounts?`<span>${counts[o.id]||0} · ${pct}%</span>`:"<span>VOTAR</span>"}</article>`}).join("")}</div>`;
     }
     const won=winner?opts.find(o=>o.id===winner):null;
-    return `<div class="pollPlayerPreview"><div class="pollPlayerPreviewHead"><div><span>${result?"RESULTADO":"DCX // VOTAÇÃO"}</span><h3>${esc(p.title||"Nova votação")}</h3></div><b>${result?"ENCERRADA":timer}</b></div>${p.description?`<p class="pollPlayerDesc">${esc(p.description)}</p>`:""}${body}${result&&won?`<div class="pollWinnerReveal"><span>ESCOLHA VENCEDORA</span><b>${esc(won.label)}</b>${won.winnerDescription?`<p>${esc(won.winnerDescription)}</p>`:""}</div>`:""}</div>`
+    const timerAttr=p.status==="active"&&p.id?` data-poll-live-timer="${esc(p.id)}"`:"";
+    return `<div class="pollPlayerPreview"><div class="pollPlayerPreviewHead"><div><span>DCX // PREVIEW DO PLAYER</span><h3>${esc(p.title||"TÍTULO DA VOTAÇÃO")}</h3></div><b${timerAttr}>${esc(timer)}</b></div>${p.description?`<p class="pollPlayerDesc">${esc(p.description)}</p>`:""}${body}${admin?`<div class="pollAdminVoteSummary"><b>${total}</b><span>VOTO${total===1?"":"S"} RECEBIDO${total===1?"":"S"} PELO FIREBASE</span></div>`:""}${result&&won?`<div class="pollWinnerReveal"><span>ESCOLHA VENCEDORA</span><b>${esc(won.label)}</b>${won.winnerDescription?`<p>${esc(won.winnerDescription)}</p>`:""}</div>`:""}</div>`
   }
   function renderFormPreview(){const box=$("pollPreview");if(!box)return;const p=readForm();p.status="preview";box.innerHTML=previewCard(p)}
 
@@ -193,13 +200,17 @@ window.DCX = window.DCX || {};
     const entries=Object.entries(polls||{}).filter(([k])=>k!=="_init").sort((a,b)=>(Number(b[1]?.createdAt)||0)-(Number(a[1]?.createdAt)||0));
     const ds=entries.filter(([,p])=>p.status==="draft"),as=entries.filter(([,p])=>p.status==="active"),hs=entries.filter(([,p])=>["closed","archived"].includes(p.status));
     drafts.innerHTML=ds.map(([id,p])=>`<article class="pollAdminCard"><div class="pollAdminCardHead"><div><span class="tag">${statusBadge(p)}</span><h3>${esc(p.title)}</h3><small>${esc(pollMeta(p))}</small></div><span>${fmtDate(p.updatedAt)}</span></div><p>${esc(p.description||"Sem descrição.")}</p><div class="actions"><button class="btn gold" onclick="DCX.Polls.edit('${esc(id)}')">EDITAR</button><button class="btn" onclick="DCX.Polls.activate('${esc(id)}')">INICIAR</button><button class="btn" onclick="DCX.Polls.duplicate('${esc(id)}')">DUPLICAR</button><button class="btn red" onclick="DCX.Polls.delete('${esc(id)}')">EXCLUIR</button></div></article>`).join("")||`<div class="dcxEmpty">Nenhum rascunho.</div>`;
-    active.innerHTML=as.map(([id,p])=>{const opts=optionEntries(p);return`<article class="pollAdminCard activePoll"><div class="pollAdminCardHead"><div><span class="tag">${statusBadge(p)}</span><h3>${esc(p.title)}</h3><small>${esc(pollMeta(p))}</small></div><b data-poll-countdown="${esc(id)}">${fmtDuration(Math.max(0,Math.ceil((p.endsAt-Date.now())/1000)))}</b></div>${previewCard(p)}<div class="pollCloseRow"><label>VENCEDOR AO ENCERRAR<select id="pollWinner-${esc(id)}"><option value="auto">AUTO // PELOS VOTOS</option><option value="">SEM VENCEDOR</option>${opts.map(o=>`<option value="${esc(o.id)}">${esc(o.label)}</option>`).join("")}</select></label><button class="btn red" onclick="DCX.Polls.closeFromCard('${esc(id)}')">ENCERRAR AGORA</button></div></article>`}).join("")||`<div class="dcxEmpty">Nenhuma votação ativa.</div>`;
-    history.innerHTML=hs.map(([id,p])=>{const del=p.deleteAt?Math.max(0,Math.ceil((p.deleteAt-Date.now())/3600000)):null;return`<article class="pollAdminCard historyPoll"><div class="pollAdminCardHead"><div><span class="tag">${statusBadge(p)}</span><h3>${esc(p.title)}</h3><small>ENCERRADA ${fmtDate(p.closedAt)} · ${totalVotes(p)} VOTO(S)</small></div>${p.deleteAt?`<span class="pollPurge">AUTO-DELETE ${del>0?`~${del}h`:"PENDENTE"}</span>`:""}</div>${previewCard(p,{result:true})}<div class="actions">${p.status!=="archived"?`<button class="btn" onclick="DCX.Polls.archive('${esc(id)}')">ARQUIVAR</button>`:""}<button class="btn" onclick="DCX.Polls.duplicate('${esc(id)}')">DUPLICAR</button><button class="btn red" onclick="DCX.Polls.delete('${esc(id)}')">EXCLUIR AGORA</button></div></article>`}).join("")||`<div class="dcxEmpty">Nenhuma votação encerrada.</div>`;
+    active.innerHTML=as.map(([id,p])=>{const opts=optionEntries(p),vt=totalVotes({...p,id});return`<article class="pollAdminCard activePoll"><div class="pollAdminCardHead"><div><span class="tag">${statusBadge(p)}</span><h3>${esc(p.title)}</h3><small>${esc(pollMeta(p))} · <b data-poll-vote-total="${esc(id)}">${vt} VOTO${vt===1?"":"S"}</b></small></div><b data-poll-live-timer="${esc(id)}">${esc(liveTimerText(p))}</b></div>${previewCard({...p,id},{admin:true})}<div class="pollCloseRow"><label>VENCEDOR AO ENCERRAR<select id="pollWinner-${esc(id)}"><option value="auto">AUTO // PELOS VOTOS</option><option value="">SEM VENCEDOR</option>${opts.map(o=>`<option value="${esc(o.id)}">${esc(o.label)}</option>`).join("")}</select></label><button class="btn red" onclick="DCX.Polls.closeFromCard('${esc(id)}')">ENCERRAR AGORA</button></div></article>`}).join("")||`<div class="dcxEmpty">Nenhuma votação ativa.</div>`;
+    history.innerHTML=hs.map(([id,p])=>{const del=p.deleteAt?Math.max(0,Math.ceil((p.deleteAt-Date.now())/3600000)):null;return`<article class="pollAdminCard historyPoll"><div class="pollAdminCardHead"><div><span class="tag">${statusBadge(p)}</span><h3>${esc(p.title)}</h3><small>ENCERRADA ${fmtDate(p.closedAt)} · ${totalVotes(p)} VOTO(S)</small></div>${p.deleteAt?`<span class="pollPurge">AUTO-DELETE ${del>0?`~${del}h`:"PENDENTE"}</span>`:""}</div>${previewCard({...p,id},{result:true,admin:true})}<div class="actions">${p.status!=="archived"?`<button class="btn" onclick="DCX.Polls.archive('${esc(id)}')">ARQUIVAR</button>`:""}<button class="btn" onclick="DCX.Polls.duplicate('${esc(id)}')">DUPLICAR</button><button class="btn red" onclick="DCX.Polls.delete('${esc(id)}')">EXCLUIR AGORA</button></div></article>`}).join("")||`<div class="dcxEmpty">Nenhuma votação encerrada.</div>`;
     const d=$("pollCountDraft"),a=$("pollCountActive"),h=$("pollCountHistory");if(d)d.textContent=ds.length;if(a)a.textContent=as.length;if(h)h.textContent=hs.length;
   }
 
   async function lifecycle(){if(!initialized)return;const now=Date.now();for(const [id,p] of Object.entries(polls||{})){if(id==="_init"||!p)continue;if(p.status==="active"&&p.closeMode==="auto"&&p.endsAt&&now>=Number(p.endsAt))await closePoll(id,"auto",true);if(["closed","archived"].includes(p.status)&&p.retention?.mode==="auto"&&p.deleteAt&&now>=Number(p.deleteAt)){try{await Promise.all([ref(id).remove(),db.ref(`rooms/${room}/dcx/pollVotes/${id}`).remove()]);console.info("Poll auto-delete",id)}catch(e){console.warn("Poll auto-delete",id,e)}}}}
-  function tick(){document.querySelectorAll("[data-poll-countdown]").forEach(el=>{const p=getPoll(el.dataset.pollCountdown);if(!p)return;const sec=Math.max(0,Math.ceil((Number(p.endsAt||0)-Date.now())/1000));el.textContent=sec>0?fmtDuration(sec):(p.closeMode==="manual"?"TEMPO ESGOTADO":"ENCERRANDO…")});lifecycle()}
+  function tick(){
+    document.querySelectorAll("[data-poll-live-timer]").forEach(el=>{const p=getPoll(el.dataset.pollLiveTimer);if(p)el.textContent=liveTimerText(p)});
+    document.querySelectorAll("[data-poll-vote-total]").forEach(el=>{const p=getPoll(el.dataset.pollVoteTotal);if(!p)return;const n=totalVotes({...p,id:p.id||el.dataset.pollVoteTotal});el.textContent=`${n} VOTO${n===1?"":"S"}`});
+    lifecycle();
+  }
 
   function render(){renderLists();renderFormPreview()}
   async function init(){
@@ -208,7 +219,7 @@ window.DCX = window.DCX || {};
     if(!auth?.currentUser||!db){retryTimer=setTimeout(init,700);return false}
     if(initialized)return true;base=`rooms/${room}/dcx/polls`;pollRef=db.ref(base);voteRef=db.ref(`rooms/${room}/dcx/pollVotes`);publicPollRef=db.ref(`rooms/${room}/dcx/meta/publicPolls`);
     pollRef.on("value",s=>{const raw=s.val()||{};polls=Object.fromEntries(Object.entries(raw).map(([id,p])=>[id,p&&typeof p==="object"?{...p,id:p.id||id}:p]));render();lifecycle();syncPublicPolls()},e=>{console.error("Polls listener",e);toast(`VOTAÇÕES // ${e.code||"ERRO"}`)});
-    voteRef.on("value",s=>{pollVotes=s.val()||{};render();syncPublicPolls()},e=>{console.error("Poll votes listener",e);toast(`VOTOS // ${e.code||"ERRO"}`)});
+    voteRef.on("value",s=>{pollVotes=s.val()||{};console.info("VOTAÇÕES // SNAPSHOT DE VOTOS",{polls:Object.keys(pollVotes).length,total:Object.values(pollVotes).reduce((n,v)=>n+Object.keys(v||{}).length,0)});render();syncPublicPolls()},e=>{console.error("Poll votes listener",e);toast(`VOTOS // ${e.code||"ERRO"}`)});
     initialized=true;
     if(!$("pollOptions")?.children.length)resetForm();clearInterval(tickTimer);tickTimer=setInterval(tick,1000);lifecycle();console.info("VOTAÇÕES V1.3 // REAL VOTE // READY",{room,build:BUILD});return true;
   }
