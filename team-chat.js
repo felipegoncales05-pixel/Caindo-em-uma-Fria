@@ -1,10 +1,10 @@
 window.DCX = window.DCX || {};
 (() => {
   'use strict';
-  const BUILD='TEAMCHAT-V1';
+  const BUILD='TEAMCHAT-V1.2';
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  let db=null, auth=null, room='', playerId='', teamId='', msgRef=null, pollTimer=null, initialized=false;
+  let db=null, auth=null, room='', playerId='', teamId='', msgRef=null, pollTimer=null, retryTimer=null, initialized=false, attaching=false;
 
   function rt(){return window.OPH?.Realtime}
   function identity(){try{return window.DCX?.Player?.getLocalIdentity?.()||null}catch{return null}}
@@ -17,7 +17,7 @@ window.DCX = window.DCX || {};
   }
   function fmt(ts){try{return new Intl.DateTimeFormat('pt-BR',{hour:'2-digit',minute:'2-digit'}).format(new Date(Number(ts)||Date.now()))}catch{return''}}
   function renderEmpty(title,body){const box=$('teamChannelMessages');if(box)box.innerHTML=`<div class="localEmptyState"><b>${esc(title)}</b><small>${esc(body)}</small></div>`}
-  function detach(){try{msgRef?.off()}catch{};msgRef=null;teamId='';}
+  function detach(){try{msgRef?.off()}catch{};msgRef=null;teamId='';attaching=false;clearTimeout(retryTimer);retryTimer=null;}
   function senderName(pid){const c=credential(pid);return c?.name||pid||'OPERADOR'}
   function renderMessages(raw){
     const box=$('teamChannelMessages');if(!box)return;
@@ -29,31 +29,45 @@ window.DCX = window.DCX || {};
     }).join('');
     box.scrollTop=box.scrollHeight;
   }
+  function scheduleRetry(delay=1800){
+    clearTimeout(retryTimer);
+    retryTimer=setTimeout(()=>{retryTimer=null;ensureAttached(true).catch?.(()=>{})},delay);
+  }
   function attachForTeam(nextTeam){
     if(!db||!room||!nextTeam)return false;
     if(teamId===nextTeam&&msgRef)return true;
-    detach();teamId=nextTeam;
+    detach();teamId=nextTeam;attaching=true;
     const c=credential(playerId), teamName=c?.teamName||nextTeam, code=c?.teamCode||'EQUIPE';
     if($('teamChatTitle'))$('teamChatTitle').textContent=teamName||'CANAL TÁTICO';
     if($('teamChatTag'))$('teamChatTag').textContent=`COMMS // ${code||'EQUIPE'}`;
     if($('teamChatSubtitle'))$('teamChatSubtitle').textContent='Mensagens visíveis somente para membros desta equipe e para o Keymaster.';
-    status('ONLINE','online');setComposer(true);
+    status('SINCRONIZANDO','busy');setComposer(false,'Validando acesso ao canal...');
     msgRef=db.ref(`rooms/${room}/dcx/teamChat/${teamId}/messages`).limitToLast(100);
-    msgRef.on('value',s=>renderMessages(s.val()||{}),e=>{console.error('Team chat listener',e);status(e.code||'ERRO','error');setComposer(false,'Sem permissão para este canal');renderEmpty('FALHA AO ABRIR CANAL',e.code||'Permissão negada')});
-    console.info('TEAM CHAT // LISTENER OK',{room,teamId,playerId,build:BUILD});
+    msgRef.on('value',s=>{attaching=false;status('ONLINE','online');setComposer(true);renderMessages(s.val()||{})},e=>{
+      console.error('Team chat listener',e,{room,teamId,playerId,build:BUILD});
+      try{msgRef?.off()}catch{};msgRef=null;teamId='';attaching=false;
+      status(e.code||'ERRO','error');setComposer(false,'Revalidando acesso...');renderEmpty('REVALIDANDO CANAL',e.code||'Permissão negada');
+      scheduleRetry(e?.code==='PERMISSION_DENIED'?2200:3500);
+    });
+    console.info('TEAM CHAT // LISTENER ATTACH',{room,teamId,playerId,build:BUILD});
     return true;
   }
-  function ensureAttached(){
+  async function ensureAttached(force=false){
     const r=rt();const nextDb=r?.getFirebaseDatabase?.()||null,nextAuth=r?.getFirebaseAuth?.()||null,nextRoom=r?.getRoom?.()||'';const id=identity();
     if(!nextDb||!nextAuth?.currentUser||!nextRoom||!id?.playerId){status('OFFLINE','offline');setComposer(false,'Conecte-se à sala primeiro');return false}
     db=nextDb;auth=nextAuth;room=nextRoom;playerId=String(id.playerId);
     const c=credential(playerId);const nextTeam=String(c?.teamId||'');
     if(!nextTeam){detach();status('SEM EQUIPE','idle');setComposer(false,'Você ainda não possui equipe');if($('teamChatTitle'))$('teamChatTitle').textContent='CANAL TÁTICO';if($('teamChatSubtitle'))$('teamChatSubtitle').textContent='O Keymaster precisa alocar seu operador em uma equipe antes de liberar este canal.';renderEmpty('SEM EQUIPE','Entre em uma equipe para usar o canal tático.');return false}
+    if(!force&&teamId===nextTeam&&msgRef)return true;
+    if(attaching)return false;
+    // Re-publica o vínculo UID -> P-ID legado antes de pedir leitura do canal.
+    // Isso fecha a corrida entre Auth persistido e requests/$uid/identity.
+    try{await r?.publishIdentity?.({nickname:id.name||c?.name||playerId,playerId})}catch(e){console.warn('Team chat identity republish',e)}
     return attachForTeam(nextTeam);
   }
   async function send(text){
     text=String(text||'').trim().slice(0,1200);if(!text)return false;
-    if(!ensureAttached()||!db||!teamId||!playerId){return false}
+    if(!(await ensureAttached())||!db||!teamId||!playerId){return false}
     const input=$('teamChannelInput'),button=$('teamChannelSend');if(input)input.disabled=true;if(button)button.disabled=true;status('ENVIANDO','busy');
     try{
       const r=db.ref(`rooms/${room}/dcx/teamChat/${teamId}/messages`).push();
@@ -63,13 +77,13 @@ window.DCX = window.DCX || {};
     }catch(e){console.error('Team chat send',e,{room,teamId,playerId});status(e.code||'ERRO','error');const t=$('toast');if(t){t.textContent=`CANAL DA EQUIPE // ${e.code||'ERRO'}`;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)}return false}
     finally{if(input)input.disabled=false;if(button)button.disabled=false}
   }
-  function open(){const panel=$('dcxTeamChannelPanel');if(panel){panel.classList.remove('hidden');panel.setAttribute('aria-hidden','false')}ensureAttached();setTimeout(()=>$('teamChannelInput')?.focus(),80)}
+  function open(){const panel=$('dcxTeamChannelPanel');if(panel){panel.classList.remove('hidden');panel.setAttribute('aria-hidden','false')}ensureAttached(true).catch?.(()=>{});setTimeout(()=>$('teamChannelInput')?.focus(),80)}
   function bind(){
     $('dcxOpenTeamChannel')?.addEventListener('click',open);
     $('teamChannelForm')?.addEventListener('submit',e=>{e.preventDefault();send($('teamChannelInput')?.value)});
-    clearInterval(pollTimer);pollTimer=setInterval(()=>{const p=$('dcxTeamChannelPanel');if(p&&!p.classList.contains('hidden'))ensureAttached()},2500);
+    clearInterval(pollTimer);pollTimer=setInterval(()=>{const p=$('dcxTeamChannelPanel');if(p&&!p.classList.contains('hidden'))ensureAttached().catch?.(()=>{})},2500);
   }
-  function init(){if(initialized)return;initialized=true;bind();ensureAttached();console.info('[DCX OS] TEAM CHAT V1 READY')}
+  function init(){if(initialized)return;initialized=true;bind();ensureAttached().catch?.(()=>{});console.info('[DCX OS] TEAM CHAT V1.2 READY')}
   window.DCX.TeamChat={init,open,send,ensureAttached,detach};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
