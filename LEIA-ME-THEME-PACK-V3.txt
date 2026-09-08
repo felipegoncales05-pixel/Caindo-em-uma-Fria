@@ -1,0 +1,18 @@
+DCX THEME PACK V3 // 22 THEMES
+
+NOVOS:
+- MIDNIGHT // NOTURNO
+- STEEL // AÇO
+- FOREST // MUSGO
+- SAKURA // ROSÉ
+- COPPER // COBRE
+- ARCTIC // GELO
+- BLOODMOON // ESCURO
+- ROYAL // SAFIRA
+- AURORA // MENTA
+- SANDSTORM // AREIA
+
+Também corrige a barra de ações dos Handouts no Keymaster.
+O botão de envio continua marcado como STORAGE PENDENTE; esta build não inventa upload real sem Firebase Storage.
+
+Não altera Firebase Rules, Auth, UID, votos, team chat ou Yumiya.

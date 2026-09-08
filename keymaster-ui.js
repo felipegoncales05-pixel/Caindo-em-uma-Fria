@@ -2,7 +2,7 @@
   "use strict";
   const STORE="dcx-km-settings-v1";
   const LEGACY_DENSITY="dcx-km-density";
-  const THEMES=new Set(["arc-cyan","dcx-green","ember-amber","void-violet","frost-blue","crimson-ruby","neon-rose","ghost-mono","solar-gold","toxic-lime","ocean-teal","dusk-wine"]);
+  const THEMES=new Set(["arc-cyan","dcx-green","ember-amber","void-violet","frost-blue","crimson-ruby","neon-rose","ghost-mono","solar-gold","toxic-lime","ocean-teal","dusk-wine","midnight-night","steel-blue","forest-moss","sakura-rose","copper-bronze","arctic-ice","bloodmoon-dark","royal-sapphire","aurora-mint","sandstorm-desert"]);
   const DENSITIES=new Set(["comfortable","compact"]);
   const DEFAULTS={theme:"arc-cyan",density:"comfortable"};
   function read(){
@@ -17,7 +17,7 @@
   }
   let state=read();
   function persist(){try{localStorage.setItem(STORE,JSON.stringify(state));localStorage.setItem(LEGACY_DENSITY,state.density)}catch(e){}}
-  function names(){return {"arc-cyan":"ARC // CIANO","dcx-green":"DCX // VERDE","ember-amber":"EMBER // ÂMBAR","void-violet":"VOID // VIOLETA","frost-blue":"FROST // AZUL","crimson-ruby":"CRIMSON // RUBI","neon-rose":"NEON // ROSA","ghost-mono":"GHOST // MONO","solar-gold":"SOLAR // DOURADO","toxic-lime":"TOXIC // LIMA","ocean-teal":"OCEAN // TURQUESA","dusk-wine":"DUSK // VINHO"}}
+  function names(){return {"arc-cyan":"ARC // CIANO","dcx-green":"DCX // VERDE","ember-amber":"EMBER // ÂMBAR","void-violet":"VOID // VIOLETA","frost-blue":"FROST // AZUL","crimson-ruby":"CRIMSON // RUBI","neon-rose":"NEON // ROSA","ghost-mono":"GHOST // MONO","solar-gold":"SOLAR // DOURADO","toxic-lime":"TOXIC // LIMA","ocean-teal":"OCEAN // TURQUESA","dusk-wine":"DUSK // VINHO","midnight-night":"MIDNIGHT // NOTURNO","steel-blue":"STEEL // AÇO","forest-moss":"FOREST // MUSGO","sakura-rose":"SAKURA // ROSÉ","copper-bronze":"COPPER // COBRE","arctic-ice":"ARCTIC // GELO","bloodmoon-dark":"BLOODMOON // ESCURO","royal-sapphire":"ROYAL // SAFIRA","aurora-mint":"AURORA // MENTA","sandstorm-desert":"SANDSTORM // AREIA"}}
   function sync(){
     document.querySelectorAll("[data-km-density-choice]").forEach(btn=>{const a=btn.dataset.kmDensityChoice===state.density;btn.classList.toggle("active",a);btn.setAttribute("aria-pressed",a?"true":"false")});
     document.querySelectorAll("[data-km-theme-choice]").forEach(btn=>{const a=btn.dataset.kmThemeChoice===state.theme;btn.classList.toggle("active",a);btn.setAttribute("aria-pressed",a?"true":"false");const em=btn.querySelector('em');if(em)em.textContent=a?'ATIVO':'USAR'});
@@ -38,6 +38,6 @@
   }
   window.KMHUD={setDensity,toggleDensity,current:()=>state.density};
   window.KMSETTINGS={setTheme,setDensity,reset,get state(){return {...state}}};
-  function init(){apply();bind();console.info('[DCX OS] KEYMASTER SETTINGS V3 // 12 THEMES + DENSITY // LOCAL ONLY')}
+  function init(){apply();bind();console.info('[DCX OS] KEYMASTER SETTINGS V4 // 22 THEMES + DENSITY // LOCAL ONLY')}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
 })();
