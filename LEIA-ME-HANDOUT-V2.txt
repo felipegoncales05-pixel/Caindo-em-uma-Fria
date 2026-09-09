@@ -1,0 +1,10 @@
+DCX // HANDOUT V2
+
+- Handouts permanecem disponíveis após abrir.
+- Leitor interno expandido para texto, imagem e link.
+- Texto bruto pode ser enviado sem arquivo/link.
+- Histórico RTDB no Keymaster: abrir, arquivar/restaurar, excluir e exportar JSON.
+- Arquivar remove da caixa do Player, mas mantém no histórico.
+- Excluir remove o Handout e seus ACKs.
+
+Sem alteração de Firebase Rules. Compatível com MEGARULE V2.2 NO-STORAGE.
